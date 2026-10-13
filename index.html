@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#fafafa" />
+    <link rel="icon" href="data:," />
+    <title>全息闪卡工坊 · 3D 全息典藏卡</title>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./workshop.css" />
+    <script type="module" src="./app.bundle.js"></script>
+    <script type="module" src="./site.bundle.js"></script>
+  </head>
+  <body>
+    <!-- ====================================================================
+         Page A: 工坊制作室 (上传素材与排版定制 - 手机端半透明侧边栏)
+         ==================================================================== -->
+    <div id="view-workshop">
+      <header class="workshop-header">
+        <div class="workshop-brand">
+          <span class="workshop-brand-cn">全息闪卡</span>
+          <span class="workshop-brand-badge">HOLO STUDIO</span>
+        </div>
+        <div class="workshop-header-actions">
+          <button id="btn-open-notice" class="btn-notice-trigger" type="button" title="查看项目与版权声明">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span>公告</span>
+          </button>
+          <button id="btn-open-deck" class="btn-deck-trigger" type="button" title="打开我的卡牌库">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            <span>我的牌库</span>
+            <span id="deck-badge" class="deck-badge">0</span>
+          </button>
+          <button id="btn-open-ws-drawer-header" class="header-refine-btn" type="button" title="打开参数与构图调节抽屉">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span class="btn-text-full">调节排版与构图</span>
+            <span class="btn-text-short">调节</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="workshop-container">
+        <!-- 核心 2D 草稿卡牌预览：手机端固定在屏幕中央可视区，永不滚出视线 -->
+        <div class="workshop-preview-col">
+          <div class="card-preview-stage">
+            <canvas id="preview-canvas" width="1024" height="1536"></canvas>
+            <div id="ws-loading" class="ws-loading-overlay">
+              <div class="ws-spinner"></div>
+              <span class="ws-loading-text">正在装裱卡牌素材...</span>
+            </div>
+          </div>
+          <span class="preview-tip">✨ 2D 实时排版预览（所见即所得）</span>
+          <button id="btn-generate-3d" class="btn-generate-3d" type="button" title="进入 3D 全息交互展台">
+            <span>生成 3D 全息卡牌</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
+
+
+
+        <!-- 半透明侧边栏 (手机端滑出抽屉，毛玻璃半透明透视卡牌；桌面端常驻右侧) -->
+        <aside id="ws-sidebar" class="glass-sidebar">
+          <div class="sidebar-header">
+            <div>
+              <span class="sidebar-kicker">WORKSHOP STUDIO</span>
+              <h2 class="sidebar-title">卡牌定制工坊</h2>
+            </div>
+            <div class="header-right-tools">
+              <button id="btn-toggle-opacity-ws" class="btn-toggle-opacity" type="button" title="切换超透视模式">👁️ 极透视</button>
+              <button id="btn-close-ws-drawer" class="sidebar-close-btn" type="button" aria-label="关闭侧边栏">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="sidebar-body">
+            <!-- 模块 1: 图层素材上传 -->
+            <section class="sidebar-section">
+              <h3 class="section-heading">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                <span>图层素材上传</span>
+              </h3>
+
+              <div class="upload-slot-grid">
+                <label class="upload-box" for="ws-upload-subject">
+                  <input type="file" id="ws-upload-subject" accept="image/*" />
+                  <svg class="upload-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span class="upload-box-title">主体 (透明 PNG)</span>
+                </label>
+
+                <label class="upload-box" for="ws-upload-bg">
+                  <input type="file" id="ws-upload-bg" accept="image/*" />
+                  <svg class="upload-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  <span class="upload-box-title">背景插画</span>
+                  <span class="upload-box-desc">任意比例自动适配</span>
+                </label>
+              </div>
+
+              <!-- 快捷免登录抠图辅助轻量引导链接 -->
+              <a href="https://bgsub.cn" target="_blank" rel="noopener noreferrer" class="link-bgsub-guide" title="前往 BgSub 免费免登录一键智能抠图 (在新标签页打开)">
+                <span>📸 没有透明图？点击去免登录一键抠图 (BgSub)</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+              </a>
+            </section>
+
+            <!-- 模块 2: 参数与景深调节 -->
+            <section class="sidebar-section">
+              <h3 class="section-heading">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+                <span>构图与参数调节</span>
+              </h3>
+
+              <!-- 主体构图与景深 -->
+              <div class="slider-group">
+                <div class="section-subrow">
+                  <span class="field-label" style="color: var(--accent);">主体构图与浮现景深</span>
+                  <button id="ws-reset-subj-pos" class="link-btn" type="button">重置居中</button>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>主体缩放</span><output id="ws-val-scale">1.00x</output></div>
+                  <input id="ws-subject-scale" type="range" min="0.5" max="1.8" step="0.02" value="1.0" class="drawer-range" />
+                </div>
+                <div class="form-grid-2">
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>水平 (X)</span><output id="ws-val-x">0px</output></div>
+                    <input id="ws-subject-x" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>垂直 (Y)</span><output id="ws-val-y">0px</output></div>
+                    <input id="ws-subject-y" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>主体浮现深度 (3D生效)</span><output id="ws-val-depth">0.32</output></div>
+                  <input id="ws-depth" type="range" min="-0.45" max="0.6" step="0.01" value="0.32" class="drawer-range" />
+                </div>
+              </div>
+
+              <!-- 背景构图与景深 -->
+              <div class="slider-group">
+                <div class="section-subrow">
+                  <span class="field-label" style="color: var(--accent);">背景构图与下陷景深</span>
+                  <button id="ws-reset-bg-pos" class="link-btn" type="button">重置背景</button>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>背景缩放</span><output id="ws-val-bg-scale">1.00x</output></div>
+                  <input id="ws-bg-scale" type="range" min="0.8" max="2.0" step="0.02" value="1.0" class="drawer-range" />
+                </div>
+                <div class="form-grid-2">
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>水平 (X)</span><output id="ws-val-bg-x">0px</output></div>
+                    <input id="ws-bg-x" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>垂直 (Y)</span><output id="ws-val-bg-y">0px</output></div>
+                    <input id="ws-bg-y" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>背景模糊质感</span><output id="ws-val-bg-blur">0px</output></div>
+                  <input id="ws-bg-blur" type="range" min="0" max="30" step="1" value="0" class="drawer-range" />
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>底纹下陷深度 (3D生效)</span><output id="ws-val-holo-depth">-0.18</output></div>
+                  <input id="ws-holo-depth" type="range" min="-0.6" max="0.4" step="0.01" value="-0.18" class="drawer-range" />
+                </div>
+                <!-- 主体与背景转动/晃动差速滑条 -->
+                <div class="slider-row" style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed rgba(197, 160, 89, 0.2);">
+                  <div class="slider-label-row"><span>转动与晃动差速 (3D生效)</span><output id="ws-val-diff">1.00x</output></div>
+                  <input id="ws-diff" type="range" min="0" max="3" step="0.05" value="1.0" class="drawer-range" />
+                </div>
+              </div>
+
+              <!-- 卡面材质与全息特效 -->
+              <div class="slider-group">
+                <div class="section-subrow">
+                  <span class="field-label" style="color: var(--accent);">卡面材质与全息特效</span>
+                </div>
+
+                <!-- 卡面材质表面选择 (8种物理质感) -->
+                <div class="finish-select-row">
+                  <span class="finish-label">卡面材质</span>
+                  <div class="swatches" role="group" aria-label="卡面材质">
+                    <button class="swatch pearl" data-finish="pearl" aria-pressed="true" aria-label="珠光" title="珠光" type="button"></button>
+                    <button class="swatch silver" data-finish="silver" aria-pressed="false" aria-label="银箔" title="银箔" type="button"></button>
+                    <button class="swatch gold" data-finish="gold" aria-pressed="false" aria-label="烫金" title="烫金" type="button"></button>
+                    <button class="swatch original" data-finish="original" aria-pressed="false" aria-label="原画" title="原画" type="button"></button>
+                    <button class="swatch matte" data-finish="matte" aria-pressed="false" aria-label="磨砂" title="磨砂" type="button"></button>
+                    <button class="swatch gloss" data-finish="gloss" aria-pressed="false" aria-label="清漆" title="清漆" type="button"></button>
+                    <button class="swatch brushed" data-finish="brushed" aria-pressed="false" aria-label="拉丝" title="拉丝" type="button"></button>
+                    <button class="swatch holo" data-finish="holo" aria-pressed="false" aria-label="光栅" title="光栅" type="button"></button>
+                  </div>
+                  <span class="finish-badge finish-name-val">珠光</span>
+                </div>
+
+                <!-- 镭射反光强度 (移动至卡面材质正下方) -->
+                <div class="slider-row" style="margin-top: 4px; margin-bottom: 8px;">
+                  <div class="slider-label-row"><span>镭射反光强度</span><output id="ws-val-foil">52%</output></div>
+                  <input id="ws-foil" type="range" min="0" max="1" step="0.01" value="0.52" class="drawer-range" />
+                </div>
+
+                <!-- 卡面特效视觉覆膜 (10款特效) -->
+                <div class="effect-select-row">
+                  <div class="effect-select-header">
+                    <span class="finish-label">卡面特效</span>
+                    <span class="finish-badge effect-name-val">纯净无特效</span>
+                  </div>
+                  <div class="effect-pill-group" role="group" aria-label="卡面特效">
+                    <button class="effect-pill active" data-effect="none" type="button">纯净</button>
+                    <button class="effect-pill" data-effect="stardust" type="button">✨ 碎钻</button>
+                    <button class="effect-pill" data-effect="star_glint" type="button">✦ 星芒</button>
+                    <button class="effect-pill" data-effect="floating_bokeh" type="button">🫧 光尘</button>
+                    <button class="effect-pill" data-effect="light_embers" type="button">🕊️ 光烬</button>
+                    <button class="effect-pill" data-effect="prismatic_petals" type="button">💎 碎羽</button>
+                    <button class="effect-pill" data-effect="cracked_ice" type="button">🧊 冰晶</button>
+                    <button class="effect-pill" data-effect="brushed_sheen" type="button">☀️ 放射</button>
+                    <button class="effect-pill" data-effect="gold_leaf" type="button">🍂 金箔</button>
+                    <button class="effect-pill" data-effect="water_ripple" type="button">💧 水波</button>
+                  </div>
+                </div>
+
+                <!-- 特效辉光程度 (保持在卡面特效下方) -->
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>特效辉光程度</span><output id="ws-val-fx-glow">50%</output></div>
+                  <input id="ws-fx-glow" type="range" min="0" max="1" step="0.01" value="0.50" class="drawer-range" />
+                </div>
+              </div>
+            </section>
+
+            <!-- 模块 3: 卡面文字定制 -->
+            <section class="sidebar-section">
+              <h3 class="section-heading">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <span>卡面文字定制</span>
+              </h3>
+
+              <div class="form-grid-2">
+                <div class="form-field">
+                  <label class="field-label" for="ws-title">主标题 / 角色</label>
+                  <input type="text" id="ws-title" class="field-input" value="八奈见杏菜" placeholder="例如：八奈见杏菜" />
+                </div>
+                <div class="form-field">
+                  <label class="field-label" for="ws-subtitle">副标题 / 出处</label>
+                  <input type="text" id="ws-subtitle" class="field-input" value="败犬女主太多了！" placeholder="例如：败犬女主太多了！" />
+                </div>
+                <div class="form-field">
+                  <label class="field-label" for="ws-collection">系列 / 所属</label>
+                  <input type="text" id="ws-collection" class="field-input" value="文学部" placeholder="例如：文学部" />
+                </div>
+                <div class="form-field">
+                  <label class="field-label" for="ws-technique">招式 / 特性</label>
+                  <input type="text" id="ws-technique" class="field-input" value="温水くん" placeholder="例如：温水くん" />
+                </div>
+                <div class="form-field full">
+                  <label class="field-label" for="ws-tagline">卡面标语 / 寄语</label>
+                  <input type="text" id="ws-tagline" class="field-input" value="あはは、温水くん。" placeholder="例如：あはは、温水くん。" />
+                </div>
+                <div class="form-field">
+                  <label class="field-label" for="ws-edition">典藏编号</label>
+                  <input type="text" id="ws-edition" class="field-input" value="001 / 001" placeholder="001 / 001" />
+                </div>
+              </div>
+            </section>
+
+            <!-- 模块 4: 边框与配色 -->
+            <section class="sidebar-section">
+              <h3 class="section-heading">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path></svg>
+                <span>边框与风格</span>
+              </h3>
+
+              <div class="form-grid-2">
+                <div class="form-field">
+                  <label class="field-label" for="ws-border">卡片边框设计</label>
+                  <select id="ws-border" class="field-select">
+                    <option value="classic-gold">经典双线金框</option>
+                    <option value="cyber">赛博前沿切角</option>
+                    <option value="ornamental">典雅多重细框</option>
+                    <option value="none">极简无边框</option>
+                  </select>
+                </div>
+
+                <div class="form-field">
+                  <label class="field-label" for="ws-theme">文字配色</label>
+                  <select id="ws-theme" class="field-select">
+                    <option value="gold">耀目鎏金</option>
+                    <option value="silver">月华秘银</option>
+                    <option value="crimson">炽烈绯红</option>
+                    <option value="cyan">荧光青蓝</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 长条按钮：保存当前修改 -->
+              <button id="ws-btn-save-changes" class="btn-save-current-changes" type="button" title="保存当前所有修改为默认设置">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span class="btn-save-text">保存当前修改</span>
+              </button>
+            </section>
+
+            <div class="sidebar-bottom-spacer"></div>
+          </div>
+        </aside>
+      </div>
+      <div class="sidebar-backdrop"></div>
+    </div>
+
+    <!-- ====================================================================
+         Page B: 3D 全息沉浸展台 (完全保留原版原生视觉，配有同款精修侧边栏与 Netlify 导出)
+         ==================================================================== -->
+    <div id="view-gallery" class="hidden">
+      <header class="masthead">
+        <a class="wordmark" href="./" aria-label="全息卡牌首页"
+          ><span class="wordmark-cn">全息卡牌<span class="brand-dot"></span></span
+          ><span class="wordmark-en">HOLO ATELIER</span></a
+        >
+        <span class="collection-label"
+          >个人典藏 <span>/</span> <span id="edition">STUDY 001</span></span
+        >
+        <div class="header-actions">
+          <button class="back-to-workshop-btn" id="btn-back-to-workshop" title="返回制作工坊更换图片与文字">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span class="btn-text-full">重新制作</span>
+            <span class="btn-text-short">工坊</span>
+          </button>
+          <button class="save-deck-btn" id="btn-save-to-deck" type="button" title="将当前编辑调试好的卡牌保存到我的牌库">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span class="btn-text-full">存入牌库</span>
+            <span class="btn-text-short">存入</span>
+          </button>
+          <button
+            class="icon-button"
+            id="info"
+            aria-label="作品信息"
+            title="作品信息"
+            disabled
+          >
+            <i data-lucide="info"></i>
+          </button>
+          <button
+            class="header-refine-btn"
+            id="btn-open-b-drawer-header"
+            type="button"
+            title="打开精修与导出侧边栏"
+            aria-label="打开精修与导出侧边栏"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            <span>精修</span>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="gallery" aria-label="卡片展台">
+          <!-- 展开放大卡牌查看按钮 (悬浮在卡牌旁边) -->
+          <!-- 展开放大卡牌查看按钮 (悬浮在卡牌右上侧) -->
+          <button id="btn-zoom-card" class="btn-card-zoom" type="button" title="展开放大卡牌查看" aria-label="展开放大卡牌查看">
+            <svg class="zoom-icon-in" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            <svg class="zoom-icon-out" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+              <polyline points="4 14 10 14 10 20"></polyline>
+              <polyline points="20 10 14 10 14 4"></polyline>
+              <line x1="14" y1="10" x2="21" y2="3"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            <span class="zoom-btn-text">展开放大</span>
+          </button>
+
+          <!-- 卡牌左下角：陀螺仪、自动回正与复位按钮 -->
+          <div class="stage-tools-bottom-left">
+            <button id="btn-gyro-toggle" class="btn-card-stage-tool" type="button" title="开启/关闭手机重力感应陀螺仪" aria-label="陀螺仪开关">
+              <svg class="gyro-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+              </svg>
+              <span class="gyro-btn-text">陀螺仪: 关</span>
+            </button>
+
+            <button id="btn-recenter-toggle" class="btn-card-stage-tool" type="button" title="开启/关闭滑动松手后自动回正" aria-label="自动回正开关">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <circle cx="12" cy="12" r="8"></circle>
+                <line x1="12" y1="2" x2="12" y2="4"></line>
+                <line x1="12" y1="20" x2="12" y2="22"></line>
+                <line x1="2" y1="12" x2="4" y2="12"></line>
+                <line x1="20" y1="12" x2="22" y2="12"></line>
+              </svg>
+              <span class="recenter-btn-text">自动回正: 关</span>
+            </button>
+
+            <button id="btn-reset-view" class="btn-card-stage-tool" type="button" title="复位卡牌视角" aria-label="复位卡牌视角">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+              </svg>
+              <span>复位</span>
+            </button>
+          </div>
+
+          <div
+            class="stage"
+            id="stage"
+            tabindex="0"
+            role="group"
+            aria-label="可旋转的全息卡片"
+          >
+            <div id="loading" class="loading" role="status">
+              <span class="loading-line"></span><span>正在装裱作品</span>
+            </div>
+          </div>
+          <div class="stage-note" aria-hidden="true">
+            <span>ART STUDY</span><span id="view-label">01 / FRONT</span>
+          </div>
+          <!-- 兼容层：保持原生输出节点存在，界面统一由右侧专属侧边栏控制 -->
+          <div class="parameter-panel" id="parameter-panel" style="display: none !important;">
+            <input id="scale" type="range" /><output id="scale-value"></output>
+            <input id="depth" type="range" /><output id="depth-value"></output>
+            <input id="fx-depth" type="range" /><output id="fx-depth-value"></output>
+            <input id="bg-depth" type="range" /><output id="bg-depth-value"></output>
+            <input id="foil" type="range" /><output id="foil-value"></output>
+            <span id="finish-name"></span>
+          </div>
+        </section>
+
+        <section class="artwork-bar" aria-label="作品与材质">
+          <div class="artwork-title">
+            <div class="title-line">
+              <h1 id="card-title">八奈见杏菜</h1>
+              <span id="subtitle">败犬女主太多了！</span>
+            </div>
+            <p id="description">あはは、温水くん。</p>
+          </div>
+          <div class="face-picker" role="group" aria-label="卡片朝向">
+            <button id="front" aria-pressed="true" disabled>正面</button
+            ><button id="back" aria-pressed="false" disabled>背面</button>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>光影之间，自有回响。</span><span>PERSONAL ART COLLECTION</span>
+      </footer>
+
+
+
+      <!-- Page B 半透明精修侧边栏 (拥有与 A 页面同样的参数调节功能，除上传图层外；拥有导出 Netlify 静态网站包功能) -->
+      <aside id="b-sidebar" class="glass-sidebar">
+        <div class="sidebar-header">
+          <div>
+            <span class="sidebar-kicker">3D EXHIBITION STUDIO</span>
+            <h2 class="sidebar-title">展台精修与导出</h2>
+          </div>
+          <div class="header-right-tools">
+            <button id="btn-toggle-opacity-b" class="btn-toggle-opacity" type="button" title="切换超透视模式">👁️ 极透视</button>
+            <button id="btn-close-b-drawer" class="sidebar-close-btn" type="button" aria-label="关闭侧边栏">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-body">
+          <!-- 模块 1: 构图与全息参数调节 (实时影响 3D 卡牌) -->
+          <section class="sidebar-section">
+            <h3 class="section-heading">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+              <span>3D 构图与参数调节</span>
+            </h3>
+
+            <!-- 主体构图与景深 -->
+              <div class="slider-group">
+                <div class="section-subrow">
+                  <span class="field-label" style="color: var(--accent);">主体构图与浮现景深</span>
+                  <button id="b-reset-subj-pos" class="link-btn" type="button">重置居中</button>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>主体缩放</span><output id="b-val-scale">1.00x</output></div>
+                  <input id="b-subject-scale" type="range" min="0.5" max="1.8" step="0.02" value="1.0" class="drawer-range" />
+                </div>
+                <div class="form-grid-2">
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>水平 (X)</span><output id="b-val-x">0px</output></div>
+                    <input id="b-subject-x" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>垂直 (Y)</span><output id="b-val-y">0px</output></div>
+                    <input id="b-subject-y" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>主体浮现深度</span><output id="b-val-depth">0.32</output></div>
+                  <input id="b-depth" type="range" min="-0.45" max="0.6" step="0.01" value="0.32" class="drawer-range" />
+                </div>
+              </div>
+
+              <!-- 背景构图与景深 -->
+              <div class="slider-group">
+                <div class="section-subrow">
+                  <span class="field-label" style="color: var(--accent);">背景构图与下陷景深</span>
+                  <button id="b-reset-bg-pos" class="link-btn" type="button">重置背景</button>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>背景缩放</span><output id="b-val-bg-scale">1.00x</output></div>
+                  <input id="b-bg-scale" type="range" min="0.8" max="2.0" step="0.02" value="1.0" class="drawer-range" />
+                </div>
+                <div class="form-grid-2">
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>水平 (X)</span><output id="b-val-bg-x">0px</output></div>
+                    <input id="b-bg-x" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>垂直 (Y)</span><output id="b-val-bg-y">0px</output></div>
+                    <input id="b-bg-y" type="range" min="-400" max="400" step="5" value="0" class="drawer-range" />
+                  </div>
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>背景模糊质感</span><output id="b-val-bg-blur">0px</output></div>
+                  <input id="b-bg-blur" type="range" min="0" max="30" step="1" value="0" class="drawer-range" />
+                </div>
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>底纹下陷深度</span><output id="b-val-holo-depth">-0.18</output></div>
+                  <input id="b-holo-depth" type="range" min="-0.6" max="0.4" step="0.01" value="-0.18" class="drawer-range" />
+                </div>
+                <!-- 主体与背景转动/晃动差速滑条 -->
+                <div class="slider-row" style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed rgba(197, 160, 89, 0.2);">
+                  <div class="slider-label-row"><span>转动与晃动差速</span><output id="b-val-diff">1.00x</output></div>
+                  <input id="b-diff" type="range" min="0" max="3" step="0.05" value="1.0" class="drawer-range" />
+                </div>
+              </div>
+
+              <!-- 卡面材质与全息特效 -->
+              <div class="slider-group">
+                <div class="section-subrow">
+                  <span class="field-label" style="color: var(--accent);">卡面材质与全息特效</span>
+                </div>
+
+                <!-- 卡面材质表面选择 (8种物理质感) -->
+                <div class="finish-select-row">
+                  <span class="finish-label">卡面材质</span>
+                  <div class="swatches" role="group" aria-label="卡面材质">
+                    <button class="swatch pearl" data-finish="pearl" aria-pressed="true" aria-label="珠光" title="珠光" type="button"></button>
+                    <button class="swatch silver" data-finish="silver" aria-pressed="false" aria-label="银箔" title="银箔" type="button"></button>
+                    <button class="swatch gold" data-finish="gold" aria-pressed="false" aria-label="烫金" title="烫金" type="button"></button>
+                    <button class="swatch original" data-finish="original" aria-pressed="false" aria-label="原画" title="原画" type="button"></button>
+                    <button class="swatch matte" data-finish="matte" aria-pressed="false" aria-label="磨砂" title="磨砂" type="button"></button>
+                    <button class="swatch gloss" data-finish="gloss" aria-pressed="false" aria-label="清漆" title="清漆" type="button"></button>
+                    <button class="swatch brushed" data-finish="brushed" aria-pressed="false" aria-label="拉丝" title="拉丝" type="button"></button>
+                    <button class="swatch holo" data-finish="holo" aria-pressed="false" aria-label="光栅" title="光栅" type="button"></button>
+                  </div>
+                  <span class="finish-badge finish-name-val">珠光</span>
+                </div>
+
+                <!-- 镭射反光强度 (移动至卡面材质正下方) -->
+                <div class="slider-row" style="margin-top: 4px; margin-bottom: 8px;">
+                  <div class="slider-label-row"><span>镭射反光强度</span><output id="b-val-foil">52%</output></div>
+                  <input id="b-foil" type="range" min="0" max="1" step="0.01" value="0.52" class="drawer-range" />
+                </div>
+
+                <!-- 卡面特效视觉覆膜 (10款特效) -->
+                <div class="effect-select-row">
+                  <div class="effect-select-header">
+                    <span class="finish-label">卡面特效</span>
+                    <span class="finish-badge effect-name-val">纯净无特效</span>
+                  </div>
+                  <div class="effect-pill-group" role="group" aria-label="卡面特效">
+                    <button class="effect-pill active" data-effect="none" type="button">纯净</button>
+                    <button class="effect-pill" data-effect="stardust" type="button">✨ 碎钻</button>
+                    <button class="effect-pill" data-effect="star_glint" type="button">✦ 星芒</button>
+                    <button class="effect-pill" data-effect="floating_bokeh" type="button">🫧 光尘</button>
+                    <button class="effect-pill" data-effect="light_embers" type="button">🕊️ 光烬</button>
+                    <button class="effect-pill" data-effect="prismatic_petals" type="button">💎 碎羽</button>
+                    <button class="effect-pill" data-effect="cracked_ice" type="button">🧊 冰晶</button>
+                    <button class="effect-pill" data-effect="brushed_sheen" type="button">☀️ 放射</button>
+                    <button class="effect-pill" data-effect="gold_leaf" type="button">🍂 金箔</button>
+                    <button class="effect-pill" data-effect="water_ripple" type="button">💧 水波</button>
+                  </div>
+                </div>
+
+                <!-- 特效辉光程度 (保持在卡面特效下方) -->
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>特效辉光程度</span><output id="b-val-fx-glow">50%</output></div>
+                  <input id="b-fx-glow" type="range" min="0" max="1" step="0.01" value="0.50" class="drawer-range" />
+                </div>
+              </div>
+          </section>
+
+          <!-- 模块 2: 卡面文字排版 -->
+          <section class="sidebar-section">
+            <h3 class="section-heading">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <span>卡面文字定制</span>
+            </h3>
+
+            <div class="form-grid-2">
+              <div class="form-field">
+                <label class="field-label" for="b-title">主标题 / 角色</label>
+                <input type="text" id="b-title" class="field-input" value="八奈见杏菜" />
+              </div>
+              <div class="form-field">
+                <label class="field-label" for="b-subtitle">副标题 / 出处</label>
+                <input type="text" id="b-subtitle" class="field-input" value="败犬女主太多了！" />
+              </div>
+              <div class="form-field">
+                <label class="field-label" for="b-collection">系列 / 所属</label>
+                <input type="text" id="b-collection" class="field-input" value="文学部" />
+              </div>
+              <div class="form-field">
+                <label class="field-label" for="b-technique">招式 / 特性</label>
+                <input type="text" id="b-technique" class="field-input" value="温水くん" />
+              </div>
+              <div class="form-field full">
+                <label class="field-label" for="b-tagline">卡面标语 / 寄语</label>
+                <input type="text" id="b-tagline" class="field-input" value="あはは、温水くん。" />
+              </div>
+              <div class="form-field">
+                <label class="field-label" for="b-edition">典藏编号</label>
+                <input type="text" id="b-edition" class="field-input" value="001 / 001" />
+              </div>
+            </div>
+          </section>
+
+          <!-- 模块 3: 边框与配色 -->
+          <section class="sidebar-section">
+            <h3 class="section-heading">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path></svg>
+              <span>边框与风格</span>
+            </h3>
+
+            <div class="form-grid-2">
+              <div class="form-field">
+                <label class="field-label" for="b-border">卡片边框设计</label>
+                <select id="b-border" class="field-select">
+                  <option value="classic-gold">经典双线金框</option>
+                  <option value="cyber">赛博前沿切角</option>
+                  <option value="ornamental">典雅多重细框</option>
+                  <option value="none">极简无边框</option>
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label class="field-label" for="b-theme">文字配色</label>
+                <select id="b-theme" class="field-select">
+                  <option value="gold">耀目鎏金</option>
+                  <option value="silver">月华秘银</option>
+                  <option value="crimson">炽烈绯红</option>
+                  <option value="cyan">荧光青蓝</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 长条按钮：保存当前修改 -->
+            <button id="b-btn-save-changes" class="btn-save-current-changes" type="button" title="保存当前所有修改为默认设置">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span class="btn-save-text">保存当前修改</span>
+            </button>
+          </section>
+
+          <!-- 模块 4: 存入牌库与导出卡牌 -->
+          <section class="sidebar-section" style="padding-top: 8px; gap: 8px;">
+            <button id="btn-sidebar-save-deck" class="btn-sidebar-save-deck" type="button">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>💾 存入我的牌库</span>
+            </button>
+            <button id="btn-save-card-photo" class="btn-save-card-photo" type="button" title="截取并保存 1400x1800 3D 高清截图">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              <span>🖼️ 保存卡片高清截图 (.png)</span>
+            </button>
+            <button id="btn-export-card" class="btn-export-card" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>📤 导出卡牌</span>
+            </button>
+            <span class="upload-box-desc" style="text-align: center; margin-top: -2px; margin-bottom: 2px;">
+              提示：这是无损导出，包含卡牌原始无损素材，可在牌库中自行导入查看
+            </span>
+            <!-- 一键部署 Netlify 独立在线预览展台 -->
+            <button id="btn-auto-deploy-netlify" class="btn-auto-deploy-netlify" type="button" title="一键将当前 3D 纯享卡牌自动部署至 Netlify">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.5 16.5c-1.5 1.26-2 3-2 3s1.74-.5 3-2L19 4l-3-3L4.5 16.5z"></path>
+                <path d="m15 5 4 4"></path>
+                <path d="M12 12l-6 6"></path>
+              </svg>
+              <span>🚀 一键部署到 Netlify（生成独立预览站）</span>
+            </button>
+
+            <!-- 部署进度条容器 -->
+            <div id="deploy-progress-wrap" class="deploy-progress-wrap" style="display: none;">
+              <div class="deploy-progress-header">
+                <span id="deploy-progress-status" class="deploy-progress-status">正在打包纯享 3D 卡牌...</span>
+                <span id="deploy-progress-percent" class="deploy-progress-percent">0%</span>
+              </div>
+              <div class="deploy-progress-track">
+                <div id="deploy-progress-bar" class="deploy-progress-bar" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <!-- 部署完成结果卡片 -->
+            <div id="deploy-result-box" class="deploy-result-box" style="display: none;">
+              <div class="deploy-result-header">
+                <span class="deploy-result-badge">✅ 独立展台已成功上线！</span>
+              </div>
+              <div class="deploy-url-input-wrap">
+                <input id="deploy-live-url" type="text" class="deploy-live-url" readonly />
+                <button id="btn-copy-live-url" class="btn-copy-live-url" type="button" title="复制在线网址">复制</button>
+              </div>
+              <div class="deploy-result-actions">
+                <a id="link-open-live-url" href="#" target="_blank" rel="noopener noreferrer" class="btn-open-live-url">
+                  <span>↗️ 直达访问展台</span>
+                </a>
+                <a id="link-claim-live-url" href="#" target="_blank" rel="noopener noreferrer" class="btn-claim-live-url" style="display: none;" title="登录 Netlify 账号以一键认领变永久">
+                  <span>⭐ 认领至 Netlify 账号 (永久有效)</span>
+                </a>
+              </div>
+            </div>
+
+            <span class="upload-box-desc" style="text-align: center; margin-top: -2px; margin-bottom: 2px;">
+              提示：该链接为 24 小时限时预览；若需永久保留该卡牌网站，可在 Netlify 登录后点击认领 (Claim)。
+            </span>
+
+            <button id="btn-export-netlify-viewer" class="btn-export-netlify-viewer" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>📦 导出 Netlify 纯享展台包 (.zip)</span>
+            </button>
+            <span class="upload-box-desc" style="text-align: center; margin-top: 2px;">
+              导出的 Netlify 压缩包为纯卡牌展示，已移除所有修改与保存功能，拖入 Netlify 即可作为独立作品上线！
+            </span>
+            <a href="https://app.netlify.com/drop" target="_blank" rel="noopener noreferrer" class="link-netlify-drop" title="前往 Netlify Drop 拖拽网页包立即上线">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span>直达 Netlify Drop 拖拽上线 ↗</span>
+            </a>
+            <div class="netlify-url-badge" title="点击复制 Netlify Drop 部署网址" id="btn-copy-netlify-url">
+              <code>https://app.netlify.com/drop</code>
+              <span class="copy-hint">点击复制</span>
+            </div>
+          </section>
+          <div class="sidebar-bottom-spacer"></div>
+        </div>
+      </aside>
+      <div class="sidebar-backdrop"></div>
+
+      <!-- 作品信息对话框 (原版 100% 保留) -->
+      <dialog id="about" aria-labelledby="about-title">
+        <button id="close-about" class="icon-button modal-close" aria-label="关闭作品信息" title="关闭作品信息">
+          <i data-lucide="x"></i>
+        </button>
+        <p class="dialog-mark">全息典藏</p>
+        <h2 id="about-title">八奈见杏菜</h2>
+        <p id="about-description">全息典藏卡片</p>
+        <dl>
+          <div>
+            <dt>来源</dt>
+            <dd>用户提供的参考作品</dd>
+          </div>
+          <div>
+            <dt>呈现</dt>
+            <dd>个人艺术卡片习作</dd>
+          </div>
+          <div>
+            <dt>编号</dt>
+            <dd id="about-edition">001 / 001</dd>
+          </div>
+        </dl>
+      </dialog>
+      <div id="notice" role="status" class="notice" hidden></div>
+    </div>
+
+    <!-- ====================================================================
+         我的卡牌库弹窗 (Card Deck Vault Modal)
+         ==================================================================== -->
+    <div id="modal-deck" class="deck-modal hidden">
+      <div class="deck-modal-backdrop" id="deck-backdrop"></div>
+      <div class="deck-modal-dialog">
+        <div class="deck-modal-header">
+          <div class="deck-header-left">
+            <span class="sidebar-kicker">PERSONAL CARD VAULT</span>
+            <div class="deck-title-row">
+              <h3 class="deck-modal-title">我的卡牌库</h3>
+              <span id="deck-modal-count" class="deck-modal-badge">0 张卡牌</span>
+            </div>
+          </div>
+          <div class="deck-header-right">
+            <input type="file" id="deck-file-input" accept=".json,application/json" style="display: none;" />
+            <button id="btn-deck-import" class="btn-deck-tool" type="button" title="从 JSON 文件导入卡牌">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>导入</span>
+            </button>
+            <button id="btn-deck-export" class="btn-deck-tool" type="button" title="导出全部卡牌备份 (.json)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>导出所有卡牌</span>
+            </button>
+            <button id="btn-close-deck" class="sidebar-close-btn" type="button" aria-label="关闭牌库">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="deck-modal-body">
+          <div id="deck-empty-state" class="deck-empty-state">
+            <div class="deck-empty-icon">🎴</div>
+            <h4 class="deck-empty-title">牌库暂无保存的卡牌</h4>
+            <p class="deck-empty-desc">在 3D 展台或工坊微调好您的卡牌后，点击顶栏或侧边栏的「存入牌库」，即可在这里永久保存、随时一键切换使用！</p>
+          </div>
+          <div id="deck-cards-grid" class="deck-cards-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         项目与版权声明公告栏弹窗 (Announcement & Copyright Modal)
+         ==================================================================== -->
+    <div id="modal-notice" class="deck-modal hidden">
+      <div class="deck-modal-backdrop" id="notice-backdrop"></div>
+      <div class="deck-modal-dialog notice-dialog">
+        <div class="deck-modal-header">
+          <div class="deck-header-left">
+            <span class="sidebar-kicker">PROJECT & COPYRIGHT NOTICE</span>
+            <div class="deck-title-row">
+              <h3 class="deck-modal-title">项目与版权声明</h3>
+            </div>
+          </div>
+          <button id="btn-close-notice-x" class="sidebar-close-btn" type="button" aria-label="关闭公告">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <div class="notice-dialog-content">
+          <div class="notice-block">
+            <h4 class="notice-block-title">
+              <span class="notice-badge">1</span>
+              <span>非商业性质声明</span>
+            </h4>
+            <p class="notice-block-p">本网站为个人前端 3D 渲染与 WebGL 着色器技术学习、研究与非营利性演示项目。页面不含任何商业推广、付费服务或广告变现行为。</p>
+          </div>
+
+          <div class="notice-block">
+            <h4 class="notice-block-title">
+              <span class="notice-badge">2</span>
+              <span>角色与美术素材版权</span>
+            </h4>
+            <p class="notice-block-p">页面中所展示的动漫角色形象（八奈见杏菜）及相关美术素材，其著作权与知识产权均归原作者、原出品方及动画制作委员会所有。素材仅用于个人艺术卡牌习作展示，如有版权方认为使用不当，请联系开发者，我们将第一时间下线对应素材。</p>
+          </div>
+
+          <div class="notice-block">
+            <h4 class="notice-block-title">
+              <span class="notice-badge">3</span>
+              <span>开源技术与致谢</span>
+            </h4>
+            <p class="notice-block-p">本项目的 3D 视差分层与动态全息着色器流水线基于开源项目 ruic-card-skill 进行二次开发与定制，底层 3D 引擎由 Three.js 驱动，遵循 MIT 开源许可协议。<br/><span style="display:inline-block; margin-top:5px; color:var(--accent,#9e7a33); font-weight:500;">特别鸣谢开源社区贡献者的技术灵感与框架支持。</span></p>
+          </div>
+        </div>
+
+        <div class="notice-dialog-footer">
+          <button id="btn-confirm-notice" class="btn-notice-confirm" type="button">我已了解并进入</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 浮动操作反馈 Toast -->
+    <div id="holo-toast" class="holo-toast"></div>
+  </body>
+</html>

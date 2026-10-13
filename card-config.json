@@ -1,0 +1,45 @@
+{
+  "title": "八奈见杏菜",
+  "subtitle": "败犬女主太多了！",
+  "technique": "温水くん～",
+  "tagline": "あはは、温水くん",
+  "edition": "001 / 001",
+  "collection": "文学部",
+  "description": "全息典藏卡片",
+  "font": "/system/fonts/NotoSansCJK-Regular.ttc",
+  "assets": {
+    "subject": "./assets/subject.png",
+    "background": "./assets/background.png",
+    "text": "./assets/text.png",
+    "lineart": "./assets/lineart.png",
+    "model": "./assets/card.glb"
+  },
+  "appearance": {
+    "finish": "pearl",
+    "borderStyle": "classic-gold",
+    "colorTheme": "gold",
+    "cardEffect": "prismatic_petals"
+  },
+  "parameters": {
+    "subjectScale": 0.8,
+    "subjectDepth": 0.25,
+    "backgroundDepth": -0.6,
+    "diff": 2,
+    "effectsDepth": 0.14,
+    "foil": 0.5,
+    "fxGlow": 0.2,
+    "subjectX": 0,
+    "subjectY": 0,
+    "bgScale": 1,
+    "bgX": 0,
+    "bgY": 0,
+    "bgBlur": 5
+  },
+  "safeArea": {
+    "scale": 1,
+    "offset": [
+      0,
+      0
+    ]
+  }
+}

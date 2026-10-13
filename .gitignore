@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+
+# Production & Build Artifacts
+*.zip
+renders/
+.netlify/
+
+# Asset Backups
+assets/*.orig.png
+assets/effects/*.orig.png
+
+# Environment & Local Overrides
+.env
+.env.local
+.env.*.local
+
+# System & Editor Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
