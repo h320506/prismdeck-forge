@@ -701,8 +701,8 @@
             <span class="upload-box-desc" style="text-align: center; margin-top: -2px; margin-bottom: 2px;">
               提示：这是无损导出，包含卡牌原始无损素材，可在牌库中自行导入查看
             </span>
-            <!-- 一键部署 Netlify 独立在线预览展台 -->
-            <button id="btn-auto-deploy-netlify" class="btn-auto-deploy-netlify" type="button" title="一键将当前 3D 纯享卡牌自动部署至 Netlify">
+            <!-- 一键部署 Netlify 独立在线预览展台向导 -->
+            <button id="btn-auto-deploy-netlify" class="btn-auto-deploy-netlify" type="button" title="一键将当前 3D 纯享卡牌部署至 Netlify">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4.5 16.5c-1.5 1.26-2 3-2 3s1.74-.5 3-2L19 4l-3-3L4.5 16.5z"></path>
                 <path d="m15 5 4 4"></path>
@@ -710,48 +710,13 @@
               </svg>
               <span>🚀 一键部署到 Netlify（生成独立预览站）</span>
             </button>
-
-            <!-- 部署进度条容器 -->
-            <div id="deploy-progress-wrap" class="deploy-progress-wrap" style="display: none;">
-              <div class="deploy-progress-header">
-                <span id="deploy-progress-status" class="deploy-progress-status">正在打包纯享 3D 卡牌...</span>
-                <span id="deploy-progress-percent" class="deploy-progress-percent">0%</span>
-              </div>
-              <div class="deploy-progress-track">
-                <div id="deploy-progress-bar" class="deploy-progress-bar" style="width: 0%;"></div>
-              </div>
-            </div>
-
-            <!-- 部署完成结果卡片 -->
-            <div id="deploy-result-box" class="deploy-result-box" style="display: none;">
-              <div class="deploy-result-header">
-                <span class="deploy-result-badge">✅ 独立展台已成功上线！</span>
-              </div>
-              <div class="deploy-url-input-wrap">
-                <input id="deploy-live-url" type="text" class="deploy-live-url" readonly />
-                <button id="btn-copy-live-url" class="btn-copy-live-url" type="button" title="复制在线网址">复制</button>
-              </div>
-              <div class="deploy-result-actions">
-                <a id="link-open-live-url" href="#" target="_blank" rel="noopener noreferrer" class="btn-open-live-url">
-                  <span>↗️ 直达访问展台</span>
-                </a>
-                <a id="link-claim-live-url" href="#" target="_blank" rel="noopener noreferrer" class="btn-claim-live-url" style="display: none;" title="登录 Netlify 账号以一键认领变永久">
-                  <span>⭐ 认领至 Netlify 账号 (永久有效)</span>
-                </a>
-              </div>
-            </div>
-
             <span class="upload-box-desc" style="text-align: center; margin-top: -2px; margin-bottom: 2px;">
-              提示：该链接为 24 小时限时预览；若需永久保留该卡牌网站，可在 Netlify 登录后点击认领 (Claim)。
+              点击进入部署向导：生成纯享展台包并直达 Netlify Drop 免登录秒级上线！
             </span>
-
-            <button id="btn-export-netlify-viewer" class="btn-export-netlify-viewer" type="button">
+            <button id="btn-export-netlify-viewer" class="btn-export-netlify-viewer" type="button" title="直接导出纯享展台压缩包">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span>📦 导出 Netlify 纯享展台包 (.zip)</span>
             </button>
-            <span class="upload-box-desc" style="text-align: center; margin-top: 2px;">
-              导出的 Netlify 压缩包为纯卡牌展示，已移除所有修改与保存功能，拖入 Netlify 即可作为独立作品上线！
-            </span>
             <a href="https://app.netlify.com/drop" target="_blank" rel="noopener noreferrer" class="link-netlify-drop" title="前往 Netlify Drop 拖拽网页包立即上线">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
               <span>直达 Netlify Drop 拖拽上线 ↗</span>
@@ -887,6 +852,100 @@
 
         <div class="notice-dialog-footer">
           <button id="btn-confirm-notice" class="btn-notice-confirm" type="button">我已了解并进入</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         Netlify 一键部署双阶段引导弹窗 (Netlify Two-Step Deploy Guidance Modal)
+         ==================================================================== -->
+    <div id="modal-deploy" class="deck-modal hidden">
+      <div class="deck-modal-backdrop" id="deploy-backdrop"></div>
+      <div class="deck-modal-dialog deploy-dialog">
+        <!-- 弹窗顶栏 -->
+        <div class="deck-modal-header">
+          <div class="deck-header-left">
+            <span class="sidebar-kicker">NETLIFY DEPLOYMENT WIZARD</span>
+            <div class="deck-title-row">
+              <h3 id="deploy-modal-title" class="deck-modal-title">一键部署到 Netlify</h3>
+              <span id="deploy-modal-step-badge" class="deck-modal-badge deploy-step-badge">步骤 1 / 2</span>
+            </div>
+          </div>
+          <button id="btn-close-deploy-x" class="sidebar-close-btn" type="button" aria-label="关闭部署弹窗">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <!-- 阶段 1：下载部署包 -->
+        <div id="deploy-view-step1" class="deploy-view-step">
+          <div class="deploy-dialog-content">
+            <div class="deploy-info-card">
+              <div class="deploy-info-icon">📦</div>
+              <div class="deploy-info-body">
+                <h4 class="deploy-info-title">下载 3D 纯享展台独立部署包</h4>
+                <p class="deploy-info-p">系统将为您打包一份仅包含 3D 全息交互卡牌的高性能纯静态网页包（.zip），已自动剔除所有后台管理与编辑代码，体积仅约 2MB，全球高速 CDN 加速。</p>
+              </div>
+            </div>
+            <div class="deploy-feature-list">
+              <div class="deploy-feature-item">
+                <span class="deploy-feature-dot">✦</span>
+                <span>包含完整三维全息着色器、您精心定制的排版文字与高清图层</span>
+              </div>
+              <div class="deploy-feature-item">
+                <span class="deploy-feature-dot">✦</span>
+                <span>100% 纯卡牌艺术展台，绝无任何编辑后台或调参侧边栏露馅</span>
+              </div>
+              <div class="deploy-feature-item">
+                <span class="deploy-feature-dot">✦</span>
+                <span>支持重力感应陀螺仪、自由旋转与全屏居中放大赏玩</span>
+              </div>
+            </div>
+          </div>
+          <div class="deploy-dialog-footer">
+            <button id="btn-deploy-download-pkg" class="btn-deploy-primary" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>生成并下载纯享部署包 (.zip) ➔</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 阶段 2：提醒上传并直达 Netlify Drop -->
+        <div id="deploy-view-step2" class="deploy-view-step" style="display: none;">
+          <div class="deploy-dialog-content">
+            <div class="deploy-success-banner">
+              <div class="deploy-success-icon">🎉</div>
+              <div class="deploy-success-body">
+                <h4 class="deploy-success-title">部署包已就绪！即将前往上线</h4>
+                <p class="deploy-success-p">部署包压缩文件已成功下载至您的浏览器下载目录中。</p>
+              </div>
+            </div>
+            
+            <div class="deploy-guidance-box">
+              <h4 class="deploy-guidance-title">
+                <span class="notice-badge">!</span>
+                <span>接下来的上传步骤（免注册·30秒上线）：</span>
+              </h4>
+              <ol class="deploy-steps-ol">
+                <li>点击下方<strong>「🚀 直达 Netlify Drop 拖拽上线」</strong>按钮，将在新标签页打开官方免登录上传页面；</li>
+                <li>在 Netlify Drop 页面中间的虚线大框中，直接将刚才下载的 <strong>.zip 压缩包拖入</strong>（或点击选择文件，<strong>无需解压</strong>）；</li>
+                <li>等待 3~5 秒上传与自动部署，即可获得专属的 <code>.netlify.app</code> 独立全息卡牌网址，随时分享给好友！</li>
+              </ol>
+            </div>
+          </div>
+          <div class="deploy-dialog-footer">
+            <a id="link-direct-netlify-drop" href="https://app.netlify.com/drop" target="_blank" rel="noopener noreferrer" class="btn-deploy-primary btn-direct-drop">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+              <span>🚀 直达 Netlify Drop 页面去上传 ↗</span>
+            </a>
+            <div class="deploy-footer-subactions">
+              <button id="btn-copy-drop-link" class="btn-deploy-ghost" type="button" title="复制 Netlify Drop 网址">
+                📋 复制 Drop 网址
+              </button>
+              <button id="btn-close-deploy-done" class="btn-deploy-ghost" type="button">
+                我已了解并关闭
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

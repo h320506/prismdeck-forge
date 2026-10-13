@@ -802,104 +802,74 @@ async function exportNetlifyViewerZip(triggerBtn) {
   }
 }
 
-// 一键自动部署至 Netlify 生成 24H 临时独立在线展台
-async function deployNetlifyViewer(triggerBtn) {
+// ==========================================================================
+// Netlify 双阶段一键部署向导 (Two-Step Guided Deployment to Netlify Drop)
+// ==========================================================================
+
+// 打开部署向导弹窗 (step: 1 为下载包，2 为上传指引)
+function openDeployModal(step = 1) {
+  const modal = $("modal-deploy");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  setDeployModalStep(step);
+}
+
+function closeDeployModal() {
+  const modal = $("modal-deploy");
+  if (modal) modal.classList.add("hidden");
+}
+
+function setDeployModalStep(step) {
+  const step1 = $("deploy-view-step1");
+  const step2 = $("deploy-view-step2");
+  const badge = $("deploy-modal-step-badge");
+  const title = $("deploy-modal-title");
+  if (step === 1) {
+    if (step1) step1.style.display = "flex";
+    if (step2) step2.style.display = "none";
+    if (badge) badge.textContent = "步骤 1 / 2";
+    if (title) title.textContent = "准备 Netlify 部署包";
+  } else {
+    if (step1) step1.style.display = "none";
+    if (step2) step2.style.display = "flex";
+    if (badge) badge.textContent = "步骤 2 / 2";
+    if (title) title.textContent = "前往 Netlify Drop 上线";
+  }
+}
+
+// 步骤 1：生成并下载纯享展台包，下载完成后自动平滑弹入步骤 2 引导
+async function handleDeployStep1Download(triggerBtn) {
   const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
-  const progressWrap = $("deploy-progress-wrap");
-  const progressBar = $("deploy-progress-bar");
-  const progressStatus = $("deploy-progress-status");
-  const progressPercent = $("deploy-progress-percent");
-  const resultBox = $("deploy-result-box");
-  const liveUrlInput = $("deploy-live-url");
-  const openLink = $("link-open-live-url");
-  const claimLink = $("link-claim-live-url");
-
-  const setProgress = (pct, text) => {
-    if (progressWrap) progressWrap.style.display = "flex";
-    if (progressBar) progressBar.style.width = pct + "%";
-    if (progressPercent) progressPercent.textContent = pct + "%";
-    if (progressStatus) progressStatus.textContent = text;
-  };
-
-  if (resultBox) resultBox.style.display = "none";
   if (triggerBtn) {
     triggerBtn.disabled = true;
-    triggerBtn.innerHTML = "<span>🚀 正在自动化部署中...</span>";
+    triggerBtn.innerHTML = "<span>📦 正在生成纯享部署包...</span>";
   }
-
   try {
-    // 阶段 1: 打包纯享卡牌 (15% -> 40%)
-    setProgress(15, "正在打包纯享 3D 卡牌素材与着色器...");
     const zip = await buildPureViewerZip();
-
-    setProgress(40, "正在压缩生成独立网站包 (ZIP)...");
     const zipBlob = await zip.generateAsync({
       type: "blob",
       compression: "DEFLATE",
       compressionOptions: { level: 6 }
     });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(zipBlob);
+    a.download = `holo-card-${state.title || "card"}-viewer-netlify.zip`;
+    a.click();
+    URL.revokeObjectURL(a.href);
 
-    // 阶段 2: 上传至 Netlify 部署接口 (40% -> 85%)
-    setProgress(55, "正在连接 Netlify 部署接口...");
-    const formData = new FormData();
-    formData.append("file", zipBlob, `holo-card-${state.title || "card"}.zip`);
+    showToast("🎉 纯享部署包已成功下载！即将前往 Netlify Drop 上线");
 
-    const progressTimer = setInterval(() => {
-      const cur = parseInt(progressBar?.style.width || "55");
-      if (cur < 85) setProgress(cur + 5, "正在上传 3D 模型与高清图层至全球边缘节点...");
-    }, 400);
-
-    let deployRes = null;
-    try {
-      const res = await fetch("/api/deploy-temp-site", {
-        method: "POST",
-        body: formData
-      });
-      clearInterval(progressTimer);
-      deployRes = await res.json();
-    } catch (netErr) {
-      clearInterval(progressTimer);
-      throw new Error("部署服务网络异常: " + netErr.message);
-    }
-
-    // 阶段 3: 部署完成展示卡片
-    if (deployRes && deployRes.ok && deployRes.url) {
-      setProgress(100, "✅ 独立展台已成功部署上线！");
-      setTimeout(() => {
-        if (progressWrap) progressWrap.style.display = "none";
-        if (resultBox) resultBox.style.display = "flex";
-        if (liveUrlInput) liveUrlInput.value = deployRes.url;
-        if (openLink) openLink.href = deployRes.url;
-        if (claimLink && deployRes.claimUrl) {
-          claimLink.href = deployRes.claimUrl;
-          claimLink.style.display = "flex";
-        }
-        showToast("🎉 您的 3D 全息卡牌独立展台已成功上线！可一键复制链接");
-      }, 500);
-    } else {
-      // Netlify 接口限流或异常兜底：自动下载纯享 ZIP 并引导用户一键拖拽
-      setProgress(100, "已为您准备好纯享展台包！");
-      setTimeout(() => {
-        if (progressWrap) progressWrap.style.display = "none";
-      }, 1000);
-
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(zipBlob);
-      a.download = `holo-card-${state.title || "card"}-viewer-netlify.zip`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-
-      const msg = deployRes?.message || "Netlify 匿名部署接口触发限制";
-      alert(`${msg}\n\n已自动为您下载【纯享展台包 (.zip)】，点击下方「直达 Netlify Drop」拖入即可免登录秒级上线独立展台！`);
-    }
+    // 自动平滑切换到阶段 2 引导弹窗
+    setTimeout(() => {
+      setDeployModalStep(2);
+    }, 450);
   } catch (err) {
-    console.error("Deploy error:", err);
-    if (progressWrap) progressWrap.style.display = "none";
-    alert("一键部署失败: " + err.message + "\n\n建议使用下方的「导出纯享展台包 (.zip)」，直接拖入 Netlify Drop 上线。");
+    console.error("Generate deploy package error:", err);
+    alert("生成部署包失败: " + err.message);
   } finally {
     if (triggerBtn) {
       triggerBtn.disabled = false;
-      triggerBtn.innerHTML = "<span>🚀 一键部署到 Netlify（生成独立预览站）</span>";
+      triggerBtn.innerHTML = origHtml;
     }
   }
 }
@@ -2881,37 +2851,54 @@ async function initApp() {
     };
   }
 
-  // 一键自动部署 Netlify 在线独立展台
+  // Netlify 一键部署双阶段向导绑定
   const autoDeployBtn = $("btn-auto-deploy-netlify");
   if (autoDeployBtn) {
-    autoDeployBtn.onclick = () => deployNetlifyViewer(autoDeployBtn);
-  }
-
-  const copyLiveUrlBtn = $("btn-copy-live-url");
-  if (copyLiveUrlBtn) {
-    copyLiveUrlBtn.onclick = () => {
-      const input = $("deploy-live-url");
-      if (!input || !input.value) return;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(input.value).then(() => {
-          copyLiveUrlBtn.textContent = "✓ 已复制";
-          setTimeout(() => { copyLiveUrlBtn.textContent = "复制"; }, 2000);
-          showToast("📋 展台网址已复制到剪贴板！发给朋友点开即可查看");
-        });
-      } else {
-        input.select();
-        document.execCommand("copy");
-        copyLiveUrlBtn.textContent = "✓ 已复制";
-        setTimeout(() => { copyLiveUrlBtn.textContent = "复制"; }, 2000);
-        showToast("📋 展台网址已复制！");
-      }
-    };
+    autoDeployBtn.onclick = () => openDeployModal(1);
   }
 
   const exportViewerBtn = $("btn-export-netlify-viewer");
   if (exportViewerBtn) {
-    exportViewerBtn.onclick = () => exportNetlifyViewerZip(exportViewerBtn);
+    exportViewerBtn.onclick = () => openDeployModal(1);
   }
+
+  // 部署向导弹窗内部交互
+  const deployDownloadBtn = $("btn-deploy-download-pkg");
+  if (deployDownloadBtn) {
+    deployDownloadBtn.onclick = () => handleDeployStep1Download(deployDownloadBtn);
+  }
+
+  const directDropLink = $("link-direct-netlify-drop");
+  if (directDropLink) {
+    directDropLink.onclick = () => {
+      showToast("🚀 正在前往 Netlify Drop，将刚才下载的 zip 直接拖入即可上线！");
+    };
+  }
+
+  const copyDropLinkBtn = $("btn-copy-drop-link");
+  if (copyDropLinkBtn) {
+    copyDropLinkBtn.onclick = () => {
+      const url = "https://app.netlify.com/drop";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          showToast("📋 已复制 Netlify Drop 部署网址到剪贴板！");
+        }).catch(() => {
+          window.open(url, "_blank");
+        });
+      } else {
+        window.open(url, "_blank");
+      }
+    };
+  }
+
+  const closeDeployX = $("btn-close-deploy-x");
+  if (closeDeployX) closeDeployX.onclick = closeDeployModal;
+
+  const closeDeployDone = $("btn-close-deploy-done");
+  if (closeDeployDone) closeDeployDone.onclick = closeDeployModal;
+
+  const deployBackdrop = $("deploy-backdrop");
+  if (deployBackdrop) deployBackdrop.onclick = closeDeployModal;
 
   const copyNetlifyUrl = $("btn-copy-netlify-url");
   if (copyNetlifyUrl) {

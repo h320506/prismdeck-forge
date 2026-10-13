@@ -2239,3 +2239,222 @@ body.is-card-expanded .stage-tools-bottom-left {
     height: 30px;
   }
 }
+
+/* ==========================================================================
+   Netlify 一键部署双阶段引导弹窗样式 (Deploy Wizard Modal)
+   ========================================================================== */
+.deploy-dialog {
+  max-width: 490px !important;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.deploy-step-badge {
+  background: rgba(197, 160, 89, 0.18) !important;
+  color: var(--accent, #9e7a33) !important;
+  border: 1px solid rgba(197, 160, 89, 0.35) !important;
+  font-weight: 600;
+}
+.deploy-view-step {
+  display: flex;
+  flex-direction: column;
+}
+.deploy-dialog-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  -webkit-overflow-scrolling: touch;
+}
+.deploy-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(197, 160, 89, 0.08);
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.deploy-info-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.deploy-info-title {
+  margin: 0 0 4px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink, #20261b);
+}
+.deploy-info-p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #555d52;
+}
+.deploy-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 4px;
+}
+.deploy-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #3b4237;
+}
+.deploy-feature-dot {
+  color: var(--accent, #9e7a33);
+  font-weight: 700;
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.deploy-dialog-footer {
+  padding: 14px 20px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.btn-deploy-primary {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #22201d 0%, #11100f 100%);
+  color: #f7eedb;
+  border: 1px solid rgba(197, 160, 89, 0.5);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.btn-deploy-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #302c29 0%, #1a1816 100%);
+  border-color: rgba(197, 160, 89, 0.85);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(197, 160, 89, 0.25);
+}
+.btn-direct-drop {
+  background: linear-gradient(135deg, #a8792e 0%, #7e5617 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 225, 160, 0.6) !important;
+  box-shadow: 0 6px 22px rgba(168, 121, 46, 0.35) !important;
+}
+.btn-direct-drop:hover {
+  background: linear-gradient(135deg, #bc8a38 0%, #8f621c 100%) !important;
+  box-shadow: 0 8px 28px rgba(168, 121, 46, 0.5) !important;
+  transform: translateY(-1px);
+}
+.deploy-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(46, 125, 50, 0.08);
+  border: 1px solid rgba(46, 125, 50, 0.28);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.deploy-success-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.deploy-success-title {
+  margin: 0 0 3px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e4620;
+}
+.deploy-success-p {
+  margin: 0;
+  font-size: 11.5px;
+  color: #3b603d;
+  line-height: 1.45;
+}
+.deploy-guidance-box {
+  background: rgba(0, 0, 0, 0.025);
+  border: 1px dashed rgba(197, 160, 89, 0.45);
+  border-radius: 12px;
+  padding: 13px 15px;
+}
+.deploy-guidance-title {
+  margin: 0 0 8px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink, #20261b);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.deploy-steps-ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #4b5247;
+}
+.deploy-steps-ol strong {
+  color: var(--ink, #20261b);
+}
+.deploy-steps-ol code {
+  background: rgba(197, 160, 89, 0.15);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--accent, #9e7a33);
+  font-family: monospace;
+}
+.deploy-footer-subactions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.btn-deploy-ghost {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  color: #555d52;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.btn-deploy-ghost:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ink, #20261b);
+}
+@media (max-width: 480px) {
+  .deploy-dialog {
+    max-width: 92vw !important;
+  }
+  .deploy-dialog-content {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+  .deploy-dialog-footer {
+    padding: 12px 16px 14px;
+  }
+}
+
