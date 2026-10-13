@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "build": "npx --yes esbuild@0.25.0 app.js --bundle --minify --format=esm --target=es2020 --outfile=app.bundle.js && npx --yes esbuild@0.25.0 site.js --bundle --minify --format=esm --target=es2020 --outfile=site.bundle.js"
+    "build": "esbuild app.js --bundle --minify --format=esm --target=es2020 --outfile=app.bundle.js && esbuild site.js --bundle --minify --format=esm --target=es2020 --outfile=site.bundle.js"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",

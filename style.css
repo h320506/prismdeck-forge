@@ -25,6 +25,7 @@
 body {
   margin: 0;
   min-width: 320px;
+  overscroll-behavior: none;
 }
 button,
 input,
@@ -170,7 +171,7 @@ button svg {
   inset: 0 0 30px;
   outline-offset: -10px !important;
   cursor: grab;
-  touch-action: pan-y;
+  touch-action: none;
 }
 .stage.dragging {
   cursor: grabbing;
@@ -359,6 +360,12 @@ button svg {
   white-space: pre-line;
   text-align: center;
   padding: 24px;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.45s ease;
+}
+.loading.fade-out {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 .loading-line {
   width: 50px;
@@ -983,6 +990,7 @@ dialog dd {
   width: 400px;
   max-width: 92vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(254, 254, 252, 0.94);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);

@@ -5,6 +5,7 @@
 #view-workshop {
   display: block;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--canvas, #fafafa);
   color: var(--ink, #20261b);
   box-sizing: border-box;
@@ -20,6 +21,7 @@
   left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
+  height: 100dvh !important;
   opacity: 0 !important;
   pointer-events: none !important;
   z-index: -999 !important;
@@ -694,6 +696,7 @@
   width: 345px;
   max-width: 88vw;
   height: 100vh;
+  height: 100dvh;
   z-index: 100;
   transform: translateX(100%);
   transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, backdrop-filter 0.2s ease;
@@ -885,6 +888,7 @@
     align-items: center;
     justify-content: center;
     height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
     padding: 0 16px calc(38px + env(safe-area-inset-bottom, 20px));
     overflow: hidden;
     position: relative;
@@ -927,6 +931,7 @@
     width: 325px;
     max-width: 82vw;
     height: 100vh;
+    height: 100dvh;
     border-radius: 0;
     background: rgba(254, 254, 252, 0.38);
     backdrop-filter: blur(9px) saturate(135%);
@@ -1414,7 +1419,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.btn-deck-export-one {
+.btn-deck-export-one,
+.btn-deck-clone {
   width: 32px;
   height: 32px;
   display: flex;
@@ -1428,7 +1434,8 @@
   transition: all 0.15s ease;
 }
 
-.btn-deck-export-one:hover {
+.btn-deck-export-one:hover,
+.btn-deck-clone:hover {
   background: rgba(197, 160, 89, 0.12);
   border-color: var(--accent, #9e7a33);
   color: var(--accent, #9e7a33);

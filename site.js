@@ -172,10 +172,20 @@ function fitImageToCanvas(img, scale = 1.0, offsetX = 0, offsetY = 0, transparen
   let drawW = 1024 * scale;
   let drawH = 1536 * scale;
 
-  if (imgAspect > canvasAspect) {
-    drawH = drawW / imgAspect;
+  if (transparentBg) {
+    // 主体透明人物：按 contain 模式完整包容呈现，避免人物被上下或左右裁断
+    if (imgAspect > canvasAspect) {
+      drawH = drawW / imgAspect;
+    } else {
+      drawW = drawH * imgAspect;
+    }
   } else {
-    drawW = drawH * imgAspect;
+    // 背景插画：按 cover 模式填满整个卡面（1024x1536），杜绝横屏宽图上下露出刺眼白边
+    if (imgAspect > canvasAspect) {
+      drawW = drawH * imgAspect;
+    } else {
+      drawH = drawW / imgAspect;
+    }
   }
 
   const posX = (1024 - drawW) / 2 + offsetX;
@@ -355,70 +365,77 @@ function render2DPreview() {
   ctx.drawImage(textCvs, 0, 0);
 }
 
-// 同步所有图层到 Page B (3D 全息视图)
-function syncTo3D() {
-  if (!window.__holo || !window.THREE) return;
+// 安全更新 CanvasTexture，复用已分配的 GPU 纹理显存，杜绝频繁创建导致的 VRAM 泄漏与上下文崩溃
+function safeUpdateCanvasTexture(uniformTarget, newCanvas) {
+  if (!window.__holo || !window.THREE || !uniformTarget || !newCanvas) return;
+  const oldTex = uniformTarget.value;
+  if (oldTex && oldTex.isCanvasTexture && oldTex.image && oldTex.image.width === newCanvas.width && oldTex.image.height === newCanvas.height) {
+    oldTex.image = newCanvas;
+    oldTex.needsUpdate = true;
+  } else {
+    const newTex = new window.THREE.CanvasTexture(newCanvas);
+    newTex.colorSpace = window.THREE.NoColorSpace;
+    newTex.needsUpdate = true;
+    uniformTarget.value = newTex;
+    if (oldTex && typeof oldTex.dispose === "function") {
+      try { oldTex.dispose(); } catch (e) {}
+    }
+  }
+}
 
-  // 1. 背景
+// 极速同步 3D 着色器浮点参数 (Zero-Cost Uniforms Sync) - 毫秒级响应，完全避免重绘画布与线稿
+function sync3DUniforms() {
+  if (!window.__holo || !window.__holo.uniforms) return;
+  const u = window.__holo.uniforms;
+  if (u.uDepth) u.uDepth.value = state.depth;
+  if (u.uBgDepth) u.uBgDepth.value = state.bgDepth;
+  if (u.uDiff) u.uDiff.value = state.diff ?? 1.0;
+  if (u.uFoil) u.uFoil.value = state.foil;
+  if (u.uFxGlow) u.uFxGlow.value = state.fxGlow ?? 0.5;
+  if (state.finish && typeof window.__holo.setFinish === "function") {
+    window.__holo.setFinish(state.finish);
+  }
+}
+
+// 同步所有图层与参数到 Page B (3D 全息视图)
+function syncTo3D() {
+  if (!window.__holo || !window.THREE || !window.__holo.uniforms) return;
+
+  // 1. 背景纹理安全更新
   if (rawBgImg) {
     const bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
-    const bgTex = new window.THREE.CanvasTexture(bgCvs);
-    bgTex.colorSpace = window.THREE.NoColorSpace;
-    window.__holo.uniforms.tBackground.value = bgTex;
+    safeUpdateCanvasTexture(window.__holo.uniforms.tBackground, bgCvs);
   }
 
-  // 2. 主体与线稿
+  // 2. 主体与线稿纹理安全更新
   if (rawSubjectImg) {
     const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
-    const subjTex = new window.THREE.CanvasTexture(subjCvs);
-    subjTex.colorSpace = window.THREE.NoColorSpace;
-    window.__holo.uniforms.tSubject.value = subjTex;
-
+    safeUpdateCanvasTexture(window.__holo.uniforms.tSubject, subjCvs);
     try {
       const lineCvs = generateLineart(subjCvs);
-      const lineTex = new window.THREE.CanvasTexture(lineCvs);
-      lineTex.colorSpace = window.THREE.NoColorSpace;
-      window.__holo.uniforms.tLine.value = lineTex;
+      safeUpdateCanvasTexture(window.__holo.uniforms.tLine, lineCvs);
     } catch (e) {
       console.warn("Lineart sync error:", e);
     }
   }
 
-  // 3. 文字
+  // 3. 文字边框纹理安全更新
   const textCvs = drawTextCanvas(state);
-  const textTex = new window.THREE.CanvasTexture(textCvs);
-  textTex.colorSpace = window.THREE.NoColorSpace;
-  window.__holo.uniforms.tText.value = textTex;
+  safeUpdateCanvasTexture(window.__holo.uniforms.tText, textCvs);
 
   // 3.5 同步卡面特效至 3D 浮层 (具备真实三维景深视差与辉光调节)
-  if (window.__holo && window.__holo.uniforms) {
-    if (state.cardEffect && state.cardEffect !== "none") {
-      const fxCvs = getEffectCanvas(state.cardEffect);
-      if (fxCvs) {
-        const fxTex = new window.THREE.CanvasTexture(fxCvs);
-        fxTex.colorSpace = window.THREE.NoColorSpace;
-        fxTex.needsUpdate = true;
-        window.__holo.uniforms.tEffects.value = fxTex;
-        if (window.__holo.uniforms.uHasFx) window.__holo.uniforms.uHasFx.value = 1.0;
-      }
-    } else {
-      if (window.__holo.uniforms.uHasFx) window.__holo.uniforms.uHasFx.value = 0.0;
+  if (state.cardEffect && state.cardEffect !== "none") {
+    const fxCvs = getEffectCanvas(state.cardEffect);
+    if (fxCvs) {
+      safeUpdateCanvasTexture(window.__holo.uniforms.tEffects, fxCvs);
+      if (window.__holo.uniforms.uHasFx) window.__holo.uniforms.uHasFx.value = 1.0;
     }
-    if (window.__holo.uniforms.uFxGlow) {
-      window.__holo.uniforms.uFxGlow.value = state.fxGlow ?? 0.5;
-    }
+  } else {
+    if (window.__holo.uniforms.uHasFx) window.__holo.uniforms.uHasFx.value = 0.0;
   }
 
-  // 4. 景深、镭射与卡面材质
-  window.__holo.uniforms.uDepth.value = state.depth;
-  window.__holo.uniforms.uBgDepth.value = state.bgDepth;
-  if (window.__holo.uniforms.uDiff) {
-    window.__holo.uniforms.uDiff.value = state.diff ?? 1.0;
-  }
-  window.__holo.uniforms.uFoil.value = state.foil;
-  if (state.finish && typeof window.__holo.setFinish === "function") {
-    window.__holo.setFinish(state.finish);
-  }
+  // 4. 着色器物理参数极速同步
+  sync3DUniforms();
 
   // 5. 更新网页文本
   const tEl = $("card-title");
@@ -526,7 +543,7 @@ async function buildPureViewerZip() {
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#fafafa" />
     <link rel="icon" href="data:," />
     <title>${cTitle} · 3D 全息典藏卡</title>
@@ -1274,7 +1291,7 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-depth" : "ws-val-depth");
       if (other) other.value = state.depth;
       if (otherVal) otherVal.textContent = depthVal.textContent;
-      if (isPageB) syncTo3D();
+      if (isPageB) sync3DUniforms();
     };
   }
 
@@ -1290,7 +1307,7 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-holo-depth" : "ws-val-holo-depth");
       if (other) other.value = state.bgDepth;
       if (otherVal) otherVal.textContent = bgDepthVal.textContent;
-      if (isPageB) syncTo3D();
+      if (isPageB) sync3DUniforms();
     };
   }
 
@@ -1341,7 +1358,7 @@ function bindSidebarInputs(prefix, isPageB = false) {
       if (other) other.value = state.fxGlow;
       if (otherVal) otherVal.textContent = fxGlowVal.textContent;
       render2DPreview();
-      if (isPageB) syncTo3D();
+      if (isPageB) sync3DUniforms();
     };
   }
 }
@@ -1624,7 +1641,20 @@ function dataUrlToBlob(dataUrl) {
   if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) {
     return Promise.resolve(null);
   }
-  return fetch(dataUrl).then((r) => r.blob()).catch(() => null);
+  try {
+    const parts = dataUrl.split(",");
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : "image/png";
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return Promise.resolve(new Blob([u8arr], { type: mime }));
+  } catch (e) {
+    return fetch(dataUrl).then((r) => r.blob()).catch(() => null);
+  }
 }
 
 function downloadJson(data, filename) {
@@ -1692,6 +1722,7 @@ async function exportCurrentCardJson(triggerBtn) {
         bgBlur: state.bgBlur,
         depth: state.depth,
         bgDepth: state.bgDepth,
+        diff: state.diff ?? 1.0,
         foil: state.foil,
         fxGlow: state.fxGlow ?? 0.5,
         thumbDataUrl,
@@ -1850,62 +1881,128 @@ async function importCardsFromFile(file) {
 const DB_NAME = "HoloCardVaultDB";
 const DB_VERSION = 1;
 const STORE_NAME = "cards";
+let memoryDeckStore = null;
+
+function isIndexedDBAvailable() {
+  try {
+    return typeof window !== "undefined" && "indexedDB" in window && window.indexedDB !== null;
+  } catch (e) {
+    return false;
+  }
+}
 
 function openDeckDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id" });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+  return new Promise((resolve) => {
+    if (!isIndexedDBAvailable()) {
+      if (!memoryDeckStore) memoryDeckStore = new Map();
+      resolve(null);
+      return;
+    }
+    try {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => {
+        console.warn("IndexedDB open error, falling back to in-memory store:", req.error);
+        if (!memoryDeckStore) memoryDeckStore = new Map();
+        resolve(null);
+      };
+    } catch (e) {
+      console.warn("IndexedDB access blocked, falling back to in-memory store:", e);
+      if (!memoryDeckStore) memoryDeckStore = new Map();
+      resolve(null);
+    }
   });
 }
 
 async function dbSaveCard(card) {
   const db = await openDeckDB();
+  if (!db) {
+    if (!memoryDeckStore) memoryDeckStore = new Map();
+    memoryDeckStore.set(card.id, card);
+    return card;
+  }
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.put(card);
-    req.onsuccess = () => resolve(card);
-    req.onerror = () => reject(req.error);
+    try {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.put(card);
+      req.onsuccess = () => resolve(card);
+      req.onerror = () => {
+        if (req.error && req.error.name === "QuotaExceededError") {
+          reject(new Error("本地存储空间已满（IndexedDB 配额超出）。建议先导出备份或清理部分旧卡牌。"));
+        } else {
+          reject(req.error || new Error("保存卡牌失败"));
+        }
+      };
+    } catch (e) {
+      if (e.name === "QuotaExceededError") {
+        reject(new Error("本地存储空间已满（IndexedDB 配额超出）。建议先导出备份或清理部分旧卡牌。"));
+      } else {
+        reject(e);
+      }
+    }
   });
 }
 
 async function dbGetAllCards() {
   const db = await openDeckDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
+  if (!db) {
+    return memoryDeckStore ? Array.from(memoryDeckStore.values()) : [];
+  }
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve(memoryDeckStore ? Array.from(memoryDeckStore.values()) : []);
+    } catch (e) {
+      resolve(memoryDeckStore ? Array.from(memoryDeckStore.values()) : []);
+    }
   });
 }
 
 async function dbGetCard(id) {
   const db = await openDeckDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.get(id);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+  if (!db) {
+    return memoryDeckStore ? (memoryDeckStore.get(id) || null) : null;
+  }
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result || (memoryDeckStore ? memoryDeckStore.get(id) : null));
+      req.onerror = () => resolve(memoryDeckStore ? (memoryDeckStore.get(id) || null) : null);
+    } catch (e) {
+      resolve(memoryDeckStore ? (memoryDeckStore.get(id) || null) : null);
+    }
   });
 }
 
 async function dbDeleteCard(id) {
   const db = await openDeckDB();
+  if (!db) {
+    if (memoryDeckStore) memoryDeckStore.delete(id);
+    return true;
+  }
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.delete(id);
-    req.onsuccess = () => resolve(true);
-    req.onerror = () => reject(req.error);
+    try {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(id);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    } catch (e) {
+      if (memoryDeckStore) memoryDeckStore.delete(id);
+      resolve(true);
+    }
   });
 }
 
@@ -1999,6 +2096,7 @@ async function saveCurrentCardToDeck(triggerBtn) {
       bgDepth: state.bgDepth,
       diff: state.diff ?? 1.0,
       foil: state.foil,
+      fxGlow: state.fxGlow ?? 0.5,
       thumbDataUrl,
       subjectBlob: subjBlob,
       bgBlob: bgBlob,
@@ -2164,6 +2262,12 @@ async function renderDeckGrid() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
           <span>一键使用</span>
         </button>
+        <button class="btn-deck-clone" data-id="${card.id}" type="button" title="复制卡牌副本">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
         <button class="btn-deck-export-one" data-id="${card.id}" type="button" title="导出此卡牌 (.json)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -2230,6 +2334,25 @@ async function renderDeckGrid() {
       useBtn.onclick = async (e) => {
         e.stopPropagation();
         await loadCardFromDeck(card.id);
+      };
+    }
+
+    const cloneBtn = item.querySelector(".btn-deck-clone");
+    if (cloneBtn) {
+      cloneBtn.onclick = async (e) => {
+        e.stopPropagation();
+        const baseName = card.name || card.title || "未命名";
+        const copyName = baseName.includes("副本") ? baseName : baseName + " (副本)";
+        const newCard = {
+          ...card,
+          id: "card_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          createdAt: Date.now(),
+          name: copyName,
+          title: copyName
+        };
+        await dbSaveCard(newCard);
+        await renderDeckGrid();
+        showToast("✨ 已创建卡牌副本「" + copyName + "」！");
       };
     }
 
@@ -2511,6 +2634,14 @@ async function handleSaveCurrentChanges() {
           const previewCanvas = $("preview-canvas");
           if (previewCanvas) {
             targetCard.thumbDataUrl = previewCanvas.toDataURL("image/jpeg", 0.75);
+          }
+          if (hasCustomSubject && rawSubjectImg) {
+            targetCard.subjectBlob = await imageToBlob(rawSubjectImg);
+            targetCard.isCustomSubject = true;
+          }
+          if (hasCustomBg && rawBgImg) {
+            targetCard.bgBlob = await imageToBlob(rawBgImg);
+            targetCard.isCustomBg = true;
           }
           await dbSaveCard(targetCard);
         }

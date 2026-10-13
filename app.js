@@ -618,7 +618,13 @@ async function init() {
     fallback3D(new Error("当前设备无法显示卡面材质"));
     return;
   }
-  $("loading").remove();
+  const loadingEl = $("loading");
+  if (loadingEl) {
+    loadingEl.classList.add("fade-out");
+    setTimeout(() => {
+      try { loadingEl.remove(); } catch (e) {}
+    }, 450);
+  }
   root.rotation.set(targetX, targetY, 0);
   window.THREE = THREE;
   window.__holo = {
@@ -699,7 +705,13 @@ function fallback3D(error) {
   flipper.append(card);
   wrap.append(flipper);
   stage.append(wrap);
-  $("loading").remove();
+  const fbLoading = $("loading");
+  if (fbLoading) {
+    fbLoading.classList.add("fade-out");
+    setTimeout(() => {
+      try { fbLoading.remove(); } catch (e) {}
+    }, 450);
+  }
 
   // ---- interaction state (independent of the WebGL path) ----
   let tx = -0.03, ty = -0.06, curX = 0, curY = 0, curFlip = 0, flipTarget = 0;
@@ -986,25 +998,54 @@ function setupControls() {
     }
     el.addEventListener("input", () => updateInput(id, name));
   });
+  const activePointers = new Map();
+  let initialPinchDist = null;
+  let initialPinchZoom = zoom;
+
   stage.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    dragging = true;
-    setAuto(false);
-    // 关键修复：触摸按下一瞬间，将 userRotX / userRotY 精准同步为当前卡牌物理旋转角，
-    // 彻底杜绝缓动中触摸或自动回正中二次滑动导致目标角与实际朝向脱节而产生的反向转动！
-    userRotX = root.rotation.x - gyroDeltaX;
-    userRotY = root.rotation.y - gyroDeltaY;
-    targetX = root.rotation.x;
-    targetY = root.rotation.y;
-    lastPointer = { x: e.clientX, y: e.clientY };
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     stage.setPointerCapture(e.pointerId);
     stage.classList.add("dragging");
     stage.focus({ preventScroll: true });
+    setAuto(false);
+
+    if (activePointers.size === 1) {
+      dragging = true;
+      // 关键修复：触摸按下一瞬间，将 userRotX / userRotY 精准同步为当前卡牌物理旋转角
+      userRotX = root.rotation.x - gyroDeltaX;
+      userRotY = root.rotation.y - gyroDeltaY;
+      targetX = root.rotation.x;
+      targetY = root.rotation.y;
+      lastPointer = { x: e.clientX, y: e.clientY };
+    } else if (activePointers.size === 2) {
+      // 切换至移动端双指捏合缩放模式
+      dragging = false;
+      const pts = Array.from(activePointers.values());
+      initialPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      initialPinchZoom = zoom;
+    }
   });
+
   stage.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    // 关键修复：根据当前朝向观察者的面（正面/背面）动态自适应拖拽方向。
-    // 当卡牌翻转至背面（cos(root.rotation.y) < 0）时，反转水平拖拽增量符号，确保无论正面还是背面，手指往左滑卡牌永远跟随往左转，往右滑永远跟随往右转！
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // 双指手势：动态缩放卡牌视角
+    if (activePointers.size === 2 && initialPinchDist) {
+      const pts = Array.from(activePointers.values());
+      const currentDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (initialPinchDist > 5) {
+        const ratio = currentDist / initialPinchDist;
+        zoom = THREE.MathUtils.clamp(initialPinchZoom * ratio, 0.72, 1.35);
+        resize();
+      }
+      return;
+    }
+
+    if (!dragging || activePointers.size !== 1) return;
+
+    // 单指拖拽：自适应正面/背面旋转
     const facingSign = Math.cos(root.rotation.y) >= 0 ? 1 : -1;
     userRotY += (e.clientX - lastPointer.x) * 0.007 * facingSign;
     userRotX += (e.clientY - lastPointer.y) * 0.005;
@@ -1013,28 +1054,43 @@ function setupControls() {
     targetX = userRotX + gyroDeltaX;
     lastPointer = { x: e.clientX, y: e.clientY };
   });
-  const release = () => {
-    dragging = false;
-    stage.classList.remove("dragging");
-    if (autoRecenter) {
-      let base = flipped ? Math.PI : 0;
-      const twoPi = Math.PI * 2;
-      const turns = Math.round((userRotY - base) / twoPi);
-      base = base + turns * twoPi;
-      userRotY = base;
-      userRotX = -0.02;
-      targetY = userRotY + gyroDeltaY;
-      targetX = userRotX + gyroDeltaX;
+
+  const releasePointer = (e) => {
+    activePointers.delete(e.pointerId);
+    if (activePointers.size === 0) {
+      dragging = false;
+      initialPinchDist = null;
+      stage.classList.remove("dragging");
+      if (autoRecenter) {
+        let base = flipped ? Math.PI : 0;
+        const twoPi = Math.PI * 2;
+        const turns = Math.round((userRotY - base) / twoPi);
+        base = base + turns * twoPi;
+        userRotY = base;
+        userRotX = -0.02;
+        targetY = userRotY + gyroDeltaY;
+        targetX = userRotX + gyroDeltaX;
+      }
+    } else if (activePointers.size === 1) {
+      // 从双指松开一指后无缝接管回单指旋转
+      const [remaining] = activePointers.values();
+      lastPointer = { x: remaining.x, y: remaining.y };
+      userRotX = root.rotation.x - gyroDeltaX;
+      userRotY = root.rotation.y - gyroDeltaY;
+      dragging = true;
+      initialPinchDist = null;
     }
   };
+
   ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) =>
-    stage.addEventListener(type, release),
+    stage.addEventListener(type, releasePointer),
   );
+
   stage.addEventListener(
     "wheel",
     (e) => {
       e.preventDefault();
-      zoom = THREE.MathUtils.clamp(zoom - e.deltaY * 0.001, 0.82, 1.05);
+      zoom = THREE.MathUtils.clamp(zoom - e.deltaY * 0.001, 0.72, 1.35);
       resize();
     },
     { passive: false },
@@ -1139,6 +1195,12 @@ function setupControls() {
     renderer.setAnimationLoop(null);
     notice("图形显示已暂停，请刷新页面恢复");
   });
+  renderer.domElement.addEventListener("webglcontextrestored", () => {
+    notice("3D 渲染已恢复");
+    try {
+      renderer.setAnimationLoop(animate);
+    } catch (e) {}
+  });
 }
 function saveCard() {
   try {
@@ -1185,7 +1247,8 @@ function saveCard() {
 function animate(now) {
   const dt = Math.min((now - lastTime) / 1000, 0.06) || 0;
   lastTime = now;
-  if (document.hidden) return;
+  const gallery = $("view-gallery");
+  if (document.hidden || (gallery && gallery.classList.contains("hidden"))) return;
   if (!media.matches || auto) elapsed += dt;
   if (auto) {
     targetY = Math.sin(elapsed * 0.42) * 0.23 - 0.055;
