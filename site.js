@@ -1213,20 +1213,22 @@ async function recordCardGif(triggerBtn) {
   const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
   if (triggerBtn) {
     triggerBtn.disabled = true;
-    triggerBtn.innerHTML = "<span>⏳ 正在录制动图 1/60 帧...</span>";
+    triggerBtn.innerHTML = "<span>⏳ 正在录制动图 1/60 帧... 请稍候</span>";
   }
+  showToast("正在录制 3 秒卡牌检视动图（共 60 帧），请稍候...", 3500);
 
   try {
     // 1. 抓取 60 帧首尾咬合无缝循环画面 (400x560, 20fps)
     const frames = await window.__holo.recordGifFrames((current, total) => {
       if (triggerBtn) {
-        triggerBtn.innerHTML = `<span>⏳ 正在录制动图 ${current}/${total} 帧...</span>`;
+        triggerBtn.innerHTML = `<span>⏳ 正在录制动图 ${current}/${total} 帧... 请稍候</span>`;
       }
     });
 
     if (triggerBtn) {
-      triggerBtn.innerHTML = "<span>⚡ 正在高速编码 GIF...</span>";
+      triggerBtn.innerHTML = "<span>⚡ 正在高速编码 GIF... 请稍候</span>";
     }
+    showToast("画面捕获完毕，正在高速量化与编码 GIF，请稍候...", 3500);
     await new Promise((r) => setTimeout(r, 20));
 
     // 2. 纯前端高保真调色板量化与快速编码
@@ -2079,6 +2081,7 @@ function showToast(msg, duration = 2800) {
     toast.classList.remove("show");
   }, duration);
 }
+window.showToast = showToast;
 
 function imageToBlob(img) {
   if (!img) return Promise.resolve(null);
@@ -3508,34 +3511,6 @@ async function initApp() {
 
   // 初始化展台卡牌放大切换
   initCardZoom();
-
-  // 陀螺仪与视角复位 Toast 联动
-  const gyroBtn = $("btn-gyro-toggle");
-  if (gyroBtn) {
-    gyroBtn.addEventListener("click", () => {
-      setTimeout(() => {
-        const isActive = gyroBtn.classList.contains("active");
-        showToast(isActive ? "🧭 已开启重力感应（晃动设备体验全息流光）" : "已关闭重力感应陀螺仪");
-      }, 80);
-    });
-  }
-
-  const recenterBtn = $("btn-recenter-toggle");
-  if (recenterBtn) {
-    recenterBtn.addEventListener("click", () => {
-      setTimeout(() => {
-        const isActive = recenterBtn.classList.contains("active");
-        showToast(isActive ? "🧲 已开启松手自动回正" : "✨ 已开启自由滑转停驻（松手不回弹）");
-      }, 80);
-    });
-  }
-
-  const resetBtn = $("btn-reset-view");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      showToast("↺ 已复位卡牌视角");
-    });
-  }
 
   // 刷新初始牌库角标
   updateDeckBadge();

@@ -419,10 +419,16 @@ function refreshIcons() {
   });
 }
 function notice(message) {
+  if (typeof window.showToast === "function") {
+    window.showToast(message);
+    return;
+  }
   clearTimeout(noticeTimer);
-  $("notice").textContent = message;
-  $("notice").hidden = false;
-  noticeTimer = setTimeout(() => ($("notice").hidden = true), 2600);
+  const n = $("notice");
+  if (!n) return;
+  n.textContent = message;
+  n.hidden = false;
+  noticeTimer = setTimeout(() => (n.hidden = true), 2600);
 }
 async function init() {
   refreshIcons();
@@ -1050,9 +1056,8 @@ function setupControls() {
 
     if (!dragging || activePointers.size !== 1) return;
 
-    // 单指拖拽：自适应正面/背面旋转
-    const facingSign = Math.cos(root.rotation.y) >= 0 ? 1 : -1;
-    userRotY += (e.clientX - lastPointer.x) * 0.007 * facingSign;
+    // 单指拖拽：360度自由流畅无阻碍旋转
+    userRotY += (e.clientX - lastPointer.x) * 0.007;
     userRotX += (e.clientY - lastPointer.y) * 0.005;
     userRotX = THREE.MathUtils.clamp(userRotX, -0.65, 0.65);
     targetY = userRotY + gyroDeltaY;
@@ -1170,7 +1175,7 @@ function setupControls() {
       const txt = gyroBtn.querySelector(".gyro-btn-text");
       if (txt) txt.textContent = active ? "陀螺仪: 开" : "陀螺仪: 关";
       gyroBtn.classList.toggle("active", active);
-      notice(active ? "已开启重力感应" : "已关闭陀螺仪");
+      notice(active ? "已开启重力感应（晃动设备体验全息流光）" : "已关闭重力感应陀螺仪");
     };
   }
 
