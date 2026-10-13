@@ -2458,3 +2458,176 @@ body.is-card-expanded .stage-tools-bottom-left {
   }
 }
 
+/* ==========================================================================
+   Page B 精修侧边栏左右双分屏与 Tab 标签样式 (Two-Page Carousel & Tabs)
+   ========================================================================== */
+
+/* 顶部明显的双 Tab 切换标签条 */
+.sidebar-tabs-nav {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px 9px;
+  gap: 8px;
+  background: rgba(254, 254, 252, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(220, 222, 212, 0.75);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.sidebar-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  background: rgba(255, 255, 255, 0.85);
+  color: #555d52;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.sidebar-tab-btn:hover {
+  background: #ffffff;
+  color: var(--ink, #20261b);
+  border-color: rgba(197, 160, 89, 0.6);
+  transform: translateY(-1px);
+}
+
+.sidebar-tab-btn.active {
+  background: linear-gradient(135deg, #24221f 0%, #141312 100%);
+  color: #f7eedb;
+  border-color: rgba(197, 160, 89, 0.85);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* 侧边栏主体针对轮播容器进行 flex 布局重置 */
+.b-sidebar-body-carousel {
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  flex: 1;
+}
+
+.sidebar-carousel-container {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.sidebar-carousel-container.show-page-2 {
+  transform: translateX(-50%);
+}
+
+.sidebar-carousel-page {
+  width: 50%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+.sidebar-page-inner {
+  padding: 14px 18px calc(75px + env(safe-area-inset-bottom, 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* 导出第二页专用头部说明 */
+.export-page-header {
+  padding: 4px 2px 2px;
+}
+
+.export-kicker {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: var(--accent, #9e7a33);
+}
+
+.export-page-title {
+  margin: 3px 0 2px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink, #20261b);
+}
+
+.export-page-desc {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #636b5f;
+}
+
+/* 跨页平滑跳转快捷条 */
+.sidebar-page-jump-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: rgba(197, 160, 89, 0.08);
+  border: 1px dashed rgba(197, 160, 89, 0.35);
+  border-radius: 9px;
+  font-size: 11.5px;
+  color: #5d6659;
+}
+
+.link-btn-gold {
+  background: none;
+  border: 0;
+  color: var(--accent, #9e7a33);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 底部微型滑动指示灯 */
+.sidebar-pagination-dots {
+  position: absolute;
+  bottom: calc(10px + env(safe-area-inset-bottom, 8px));
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  pointer-events: auto;
+  z-index: 15;
+}
+
+.pagination-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pagination-dot.active {
+  width: 20px;
+  border-radius: 4px;
+  background: var(--accent, #9e7a33);
+  box-shadow: 0 2px 6px rgba(158, 122, 51, 0.4);
+}
+
+

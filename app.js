@@ -511,7 +511,11 @@ async function init() {
     : new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
   effects.colorSpace = THREE.NoColorSpace;
   if (!hasFx) effects.needsUpdate = true;
-  [...textures, line, effects].forEach((t) => {
+  const back = config.assets.back
+    ? await loadTextureSafe(config.assets.back)
+    : backTexture();
+  back.colorSpace = THREE.NoColorSpace;
+  [...textures, line, effects, back].forEach((t) => {
     t.colorSpace = THREE.NoColorSpace;
     t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   });
@@ -531,7 +535,7 @@ async function init() {
     tText: { value: textures[2] },
     tLine: { value: line },
     tEffects: { value: effects },
-    tBack: { value: backTexture() },
+    tBack: { value: back },
     uTime: { value: 0 },
     uView: { value: new THREE.Vector3(0, 0, 1) },
     uFit: { value: new THREE.Vector2(1, 1) },

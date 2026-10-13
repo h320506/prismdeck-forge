@@ -19,6 +19,7 @@ const state = {
   cardEffect: "none",
   borderStyle: "classic-gold",
   colorTheme: "gold",
+  backStyle: "ambient",
   subjectScale: 1.0,
   subjectX: 0,
   subjectY: 0,
@@ -318,6 +319,309 @@ function drawTextCanvas(cfg) {
   return c;
 }
 
+// 动态绘制 4 款全新卡背视觉纹理 (与正面文字、首字、配色及素材完全实时动态联动)
+function drawBackCanvas(cfg, bgImg, subjImg) {
+  const c = document.createElement("canvas");
+  c.width = 1024;
+  c.height = 1536;
+  const ctx = c.getContext("2d");
+
+  const title = (cfg.title || "八奈见杏菜").trim();
+  const subtitle = (cfg.subtitle || "").trim();
+  const collection = (cfg.collection || "HOLO STUDIO").trim();
+  const edition = (cfg.edition || "001 / 001").trim();
+  const tagline = (cfg.tagline || "").trim();
+  const firstChar = title.slice(0, 1) || "卡";
+  const style = cfg.backStyle || "ambient";
+
+  let goldBright = "#f4d087";
+  let goldDeep = "#c5a059";
+  let fontDark = "#2d352b";
+
+  if (cfg.colorTheme === "silver") {
+    goldBright = "#e2e8f0";
+    goldDeep = "#94a3b8";
+    fontDark = "#252d3a";
+  } else if (cfg.colorTheme === "crimson") {
+    goldBright = "#ffb3be";
+    goldDeep = "#e05368";
+    fontDark = "#3a131b";
+  } else if (cfg.colorTheme === "cyan") {
+    goldBright = "#99f6e4";
+    goldDeep = "#14b8a6";
+    fontDark = "#122f32";
+  }
+
+  if (style === "obsidian") {
+    // 方案 2: 黑曜晶石鎏金 (暗黑轻奢黑金)
+    ctx.fillStyle = "#141615";
+    ctx.fillRect(0, 0, 1024, 1536);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
+    for (let y = 0; y < 1536; y += 8) {
+      ctx.fillRect(0, y, 1024, 2);
+    }
+
+    const rad = ctx.createRadialGradient(512, 700, 20, 512, 700, 480);
+    rad.addColorStop(0, "rgba(212, 175, 55, 0.15)");
+    rad.addColorStop(0.5, "rgba(212, 175, 55, 0.04)");
+    rad.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = rad;
+    ctx.fillRect(0, 0, 1024, 1536);
+
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(56, 56, 912, 1424);
+    ctx.strokeStyle = goldBright;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(68, 68, 888, 1400);
+
+    const cornerPoints = [[68, 68], [956, 68], [68, 1468], [956, 1468]];
+    ctx.fillStyle = goldBright;
+    cornerPoints.forEach(([cx, cy]) => {
+      ctx.fillRect(cx - 5, cy - 5, 10, 10);
+    });
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = goldBright;
+    ctx.font = '500 28px "Songti SC", "STSong", serif';
+    ctx.fillText(subtitle || title, 512, 220);
+
+    ctx.font = '16px "PingFang SC", sans-serif';
+    ctx.fillStyle = goldDeep;
+    ctx.fillText("LIMITED GOLD ARCHIVE", 512, 260);
+
+    ctx.font = '500 380px "Songti SC", "STSong", serif';
+    ctx.fillStyle = goldBright;
+    ctx.fillText(firstChar, 512, 850);
+
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(412, 1040);
+    ctx.lineTo(612, 1040);
+    ctx.stroke();
+
+    ctx.font = '600 44px "PingFang SC", sans-serif';
+    ctx.fillStyle = goldBright;
+    ctx.fillText(title, 512, 1110);
+
+    if (tagline) {
+      ctx.font = '22px "PingFang SC", sans-serif';
+      ctx.fillStyle = "rgba(244, 208, 135, 0.75)";
+      ctx.fillText(tagline, 512, 1165);
+    }
+
+    ctx.font = '500 24px "PingFang SC", sans-serif';
+    ctx.fillStyle = goldBright;
+    ctx.fillText(edition, 512, 1370);
+
+    ctx.font = '15px "PingFang SC", sans-serif';
+    ctx.fillStyle = goldDeep;
+    ctx.fillText("✦ OBSIDIAN ART CERTIFIED ✦", 512, 1410);
+
+  } else if (style === "minimal") {
+    // 方案 3: 极简馆藏印鉴 (高雅象牙白)
+    ctx.fillStyle = "#faf9f6";
+    ctx.fillRect(0, 0, 1024, 1536);
+
+    ctx.strokeStyle = "#aeb5aa";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(56, 56, 912, 1424);
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(68, 68, 888, 1400);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#636c5f";
+    ctx.font = '500 28px "Songti SC", "STSong", serif';
+    ctx.fillText(subtitle || title, 512, 220);
+
+    ctx.font = '16px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#8a9486";
+    ctx.fillText("ATELIER CURATED STUDY", 512, 260);
+
+    ctx.font = '500 380px "Songti SC", "STSong", serif';
+    ctx.fillStyle = "rgba(70, 78, 68, 0.75)";
+    ctx.fillText(firstChar, 512, 850);
+
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(422, 1040);
+    ctx.lineTo(602, 1040);
+    ctx.stroke();
+
+    ctx.font = '600 44px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#333c30";
+    ctx.fillText(title, 512, 1110);
+
+    ctx.font = '22px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#707a6c";
+    ctx.fillText("个人典藏 · 习作编号", 512, 1165);
+
+    ctx.font = '500 24px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#464e44";
+    ctx.fillText(edition, 512, 1370);
+
+    ctx.font = '15px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#8a9486";
+    ctx.fillText("WHITE ATELIER ARCHIVE", 512, 1410);
+
+  } else if (style === "silhouette") {
+    // 方案 4: 角色剪影图腾 (专属印记)
+    ctx.fillStyle = "#f3f5f4";
+    ctx.fillRect(0, 0, 1024, 1536);
+
+    if (subjImg) {
+      try {
+        const tempC = document.createElement("canvas");
+        tempC.width = 1024;
+        tempC.height = 1536;
+        const tCtx = tempC.getContext("2d");
+        tCtx.drawImage(subjImg, 160, 260, 704, 1056);
+        tCtx.globalCompositeOperation = "source-in";
+        tCtx.fillStyle = "rgba(35, 60, 95, 0.18)";
+        tCtx.fillRect(0, 0, 1024, 1536);
+        ctx.drawImage(tempC, 0, 0);
+      } catch (e) {
+        console.warn("Silhouette draw error:", e);
+      }
+    }
+
+    ctx.strokeStyle = "rgba(197, 160, 89, 0.35)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(512, 700, 320, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(160, 175, 190, 0.4)";
+    ctx.beginPath();
+    ctx.arc(512, 700, 345, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(160, 175, 190, 0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(56, 56, 912, 1424);
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(68, 68, 888, 1400);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#25384e";
+    ctx.font = '500 28px "Songti SC", "STSong", serif';
+    ctx.fillText(subtitle || title, 512, 210);
+
+    ctx.font = '16px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#6d8299";
+    ctx.fillText("CHARACTER EMBLEM ARCHIVE", 512, 250);
+
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(422, 1080);
+    ctx.lineTo(602, 1080);
+    ctx.stroke();
+
+    ctx.font = '600 44px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#1e2e42";
+    ctx.fillText(title, 512, 1145);
+
+    ctx.font = '22px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#51677f";
+    ctx.fillText("✦ 专属角色图腾 ✦", 512, 1195);
+
+    ctx.font = '500 24px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#25384e";
+    ctx.fillText(edition, 512, 1370);
+
+    ctx.font = '15px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#788ca2";
+    ctx.fillText("COLLECTIBLE TRADING EMBLEM", 512, 1410);
+
+  } else {
+    // 方案 1: 光影氛围漫透 (提取背景色晕染 - 默认款式)
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, 1024, 1536);
+
+    if (bgImg) {
+      try {
+        ctx.save();
+        ctx.filter = "blur(50px)";
+        ctx.drawImage(bgImg, -100, -100, 1224, 1736);
+        ctx.restore();
+      } catch (e) {
+        console.warn("Back blur error:", e);
+      }
+    }
+    ctx.fillStyle = "rgba(255, 255, 255, 0.48)";
+    ctx.fillRect(0, 0, 1024, 1536);
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(52, 52, 920, 1432);
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(66, 66, 892, 1404);
+
+    const cornerDiamonds = [[66, 66], [958, 66], [66, 1470], [958, 1470]];
+    ctx.fillStyle = goldDeep;
+    cornerDiamonds.forEach(([cx, cy]) => {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 6);
+      ctx.lineTo(cx + 6, cy);
+      ctx.lineTo(cx, cy + 6);
+      ctx.lineTo(cx - 6, cy);
+      ctx.closePath();
+      ctx.fill();
+    });
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = fontDark;
+    ctx.font = '500 28px "Songti SC", "STSong", serif';
+    ctx.fillText(subtitle || title, 512, 220);
+
+    ctx.font = '16px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#636d60";
+    ctx.fillText("PERSONAL ART COLLECTION", 512, 260);
+
+    ctx.font = '500 380px "Songti SC", "STSong", serif';
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fillText(firstChar, 512, 850);
+    ctx.fillStyle = goldDeep;
+    ctx.globalAlpha = 0.55;
+    ctx.fillText(firstChar, 514, 852);
+    ctx.globalAlpha = 1.0;
+
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(412, 1040);
+    ctx.lineTo(612, 1040);
+    ctx.stroke();
+
+    ctx.font = '600 44px "PingFang SC", sans-serif';
+    ctx.fillStyle = fontDark;
+    ctx.fillText(title, 512, 1110);
+
+    if (tagline) {
+      ctx.font = '22px "PingFang SC", sans-serif';
+      ctx.fillStyle = "#555f52";
+      ctx.fillText(tagline, 512, 1165);
+    }
+
+    ctx.font = '500 24px "PingFang SC", sans-serif';
+    ctx.fillStyle = fontDark;
+    ctx.fillText(edition, 512, 1370);
+
+    ctx.font = '15px "PingFang SC", sans-serif';
+    ctx.fillStyle = "#707a6d";
+    ctx.fillText("✦ HOLO ATELIER STUDY ✦", 512, 1410);
+  }
+
+  return c;
+}
+
 // 刷新 Page A 的 2D 预览
 function render2DPreview() {
   const previewCanvas = $("preview-canvas");
@@ -447,6 +751,12 @@ function syncTo3D() {
   const eEl = $("edition");
   if (eEl) eEl.textContent = state.edition;
 
+  // 6. 卡背纹理更新 (支持4款卡背风格与正面文字/首字/配色完全实时动态联动)
+  if (window.__holo && window.__holo.uniforms && window.__holo.uniforms.tBack) {
+    const backCvs = drawBackCanvas(state, rawBgImg, rawSubjectImg);
+    safeUpdateCanvasTexture(window.__holo.uniforms.tBack, backCvs);
+  }
+
   window.dispatchEvent(new Event("resize"));
 }
 
@@ -477,19 +787,21 @@ function showWorkshop() {
 async function buildPureViewerZip() {
   const zip = new JSZip();
 
-  // 1. 生成 4 张最新真实 PNG 图层 (已烘焙构图缩放、位移与模糊)
+  // 1. 生成最新真实 PNG 图层 (已烘焙构图缩放、位移、模糊与卡背款式)
   const bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
   const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
   const textCvs = drawTextCanvas(state);
   const lineCvs = generateLineart(subjCvs);
+  const backCvs = drawBackCanvas(state, rawBgImg, rawSubjectImg);
 
   const getBlob = (cvs) => new Promise((resolve) => cvs.toBlob(resolve, "image/png"));
 
-  const [bgBlob, subjBlob, textBlob, lineBlob] = await Promise.all([
+  const [bgBlob, subjBlob, textBlob, lineBlob, backBlob] = await Promise.all([
     getBlob(bgCvs),
     getBlob(subjCvs),
     getBlob(textCvs),
-    getBlob(lineCvs)
+    getBlob(lineCvs),
+    getBlob(backCvs)
   ]);
 
   const assets = zip.folder("assets");
@@ -497,6 +809,7 @@ async function buildPureViewerZip() {
   assets.file("subject.png", subjBlob);
   assets.file("text.png", textBlob);
   assets.file("lineart.png", lineBlob);
+  assets.file("back.png", backBlob);
 
   // 如果启用了卡面特效，导出特效图层 (直接获取源素材，确保无任何绘制或加载遗漏)
   if (state.cardEffect && state.cardEffect !== "none") {
@@ -737,7 +1050,8 @@ async function buildPureViewerZip() {
     edition: state.edition,
     description: `${state.subtitle || ""} 全息典藏卡片`,
     appearance: {
-      finish: state.finish || "pearl"
+      finish: state.finish || "pearl",
+      backStyle: state.backStyle || "ambient"
     },
     parameters: {
       subjectScale: 1.0,
@@ -756,6 +1070,7 @@ async function buildPureViewerZip() {
       subject: "./assets/subject.png",
       background: "./assets/background.png",
       text: "./assets/text.png",
+      back: "./assets/back.png",
       lineart: "./assets/lineart.png",
       model: "./assets/card.glb",
       ...(state.cardEffect && state.cardEffect !== "none" ? { effects: "./assets/effects.png" } : {})
@@ -771,7 +1086,7 @@ async function exportNetlifyViewerZip(triggerBtn) {
   const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
   if (triggerBtn) {
     triggerBtn.disabled = true;
-    triggerBtn.innerHTML = "<span>📦 正在打包纯享展台...</span>";
+    triggerBtn.innerHTML = "<span>正在打包纯享展台...</span>";
   }
 
   try {
@@ -842,7 +1157,7 @@ async function handleDeployStep1Download(triggerBtn) {
   const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
   if (triggerBtn) {
     triggerBtn.disabled = true;
-    triggerBtn.innerHTML = "<span>📦 正在生成纯享部署包...</span>";
+    triggerBtn.innerHTML = "<span>正在生成纯享部署包...</span>";
   }
   try {
     const zip = await buildPureViewerZip();
@@ -857,7 +1172,7 @@ async function handleDeployStep1Download(triggerBtn) {
     a.click();
     URL.revokeObjectURL(a.href);
 
-    showToast("🎉 纯享部署包已成功下载！即将前往 Netlify Drop 上线");
+    showToast("纯享部署包已成功下载！即将前往 Netlify Drop 上线");
 
     // 自动平滑切换到阶段 2 引导弹窗
     setTimeout(() => {
@@ -879,7 +1194,7 @@ async function exportFullWebsiteZip(triggerBtn) {
   const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
   if (triggerBtn) {
     triggerBtn.disabled = true;
-    triggerBtn.innerHTML = "<span>📦 正在打包整站部署包...</span>";
+    triggerBtn.innerHTML = "<span>正在打包整站部署包...</span>";
   }
 
   try {
@@ -913,7 +1228,8 @@ async function exportFullWebsiteZip(triggerBtn) {
         finish: state.finish || "pearl",
         borderStyle: state.borderStyle || "classic-gold",
         colorTheme: state.colorTheme || "gold",
-        cardEffect: state.cardEffect || "none"
+        cardEffect: state.cardEffect || "none",
+        backStyle: state.backStyle || "ambient"
       },
       parameters: {
         subjectScale: state.subjectScale ?? 1.0,
@@ -1068,6 +1384,17 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const other = $(prefix === "ws" ? "b-theme" : "ws-theme");
       if (other) other.value = e.target.value;
       render2DPreview();
+      if (isPageB) syncTo3D();
+    };
+  }
+
+  const backStyleEl = $(prefix + "-back-style");
+  if (backStyleEl) {
+    backStyleEl.value = state.backStyle || "ambient";
+    backStyleEl.onchange = (e) => {
+      state.backStyle = e.target.value;
+      const other = $(prefix === "ws" ? "b-back-style" : "ws-back-style");
+      if (other) other.value = e.target.value;
       if (isPageB) syncTo3D();
     };
   }
@@ -1429,6 +1756,83 @@ function initOpacityToggles() {
 }
 
 
+// ==========================================================================
+// 精修侧边栏左右双分屏与 Tab 切换系统 (Two-Page Carousel & Tab System)
+// ==========================================================================
+let currentBSidebarPage = 1;
+
+function switchBSidebarPage(pageNum) {
+  currentBSidebarPage = pageNum === 2 ? 2 : 1;
+  const carousel = $("b-sidebar-carousel");
+  const tabAdjust = $("b-tab-adjust");
+  const tabExport = $("b-tab-export");
+  const dotAdjust = $("dot-page-adjust");
+  const dotExport = $("dot-page-export");
+
+  if (currentBSidebarPage === 1) {
+    if (carousel) carousel.classList.remove("show-page-2");
+    if (tabAdjust) {
+      tabAdjust.classList.add("active");
+      tabAdjust.setAttribute("aria-selected", "true");
+    }
+    if (tabExport) {
+      tabExport.classList.remove("active");
+      tabExport.setAttribute("aria-selected", "false");
+    }
+    if (dotAdjust) dotAdjust.classList.add("active");
+    if (dotExport) dotExport.classList.remove("active");
+  } else {
+    if (carousel) carousel.classList.add("show-page-2");
+    if (tabAdjust) {
+      tabAdjust.classList.remove("active");
+      tabAdjust.setAttribute("aria-selected", "false");
+    }
+    if (tabExport) {
+      tabExport.classList.add("active");
+      tabExport.setAttribute("aria-selected", "true");
+    }
+    if (dotAdjust) dotAdjust.classList.remove("active");
+    if (dotExport) dotExport.classList.add("active");
+  }
+}
+
+// 触摸手势左右滑动监听 (Swipe View)
+function initBSidebarSwipe() {
+  const carousel = $("b-sidebar-carousel");
+  if (!carousel) return;
+
+  let startX = 0;
+  let startY = 0;
+  let isSwiping = false;
+
+  carousel.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isSwiping = true;
+  }, { passive: true });
+
+  carousel.addEventListener("touchend", (e) => {
+    if (!isSwiping || e.changedTouches.length !== 1) return;
+    isSwiping = false;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const diffX = endX - startX;
+    const diffY = endY - startY;
+
+    // 水平滑动距离大于 45px 且横向位移大于纵向位移的 1.3 倍，判定为有效切页滑动手势
+    if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
+      if (diffX < 0 && currentBSidebarPage === 1) {
+        // 向左轻扫：进入第 2 页（导出与发布）
+        switchBSidebarPage(2);
+      } else if (diffX > 0 && currentBSidebarPage === 2) {
+        // 向右轻扫：返回第 1 页（参数排版）
+        switchBSidebarPage(1);
+      }
+    }
+  }, { passive: true });
+}
+
 // 初始化侧边栏折叠/滑出控制与外部点击自动缩回
 function initDrawerToggles() {
   const wsSidebar = $("ws-sidebar");
@@ -1458,6 +1862,7 @@ function initDrawerToggles() {
   };
 
   const openB = () => {
+    switchBSidebarPage(1);
     bSidebar?.classList.add("open");
     setBackdrops(true);
   };
@@ -1473,6 +1878,25 @@ function initDrawerToggles() {
   if (bFloatBtn) bFloatBtn.onclick = openB;
   if (bHeaderBtn) bHeaderBtn.onclick = openB;
   if (bCloseBtn) bCloseBtn.onclick = closeB;
+
+  // B 侧边栏双 Tab 标签、跳转按钮与滑动监听
+  const tabAdjust = $("b-tab-adjust");
+  const tabExport = $("b-tab-export");
+  if (tabAdjust) tabAdjust.onclick = () => switchBSidebarPage(1);
+  if (tabExport) tabExport.onclick = () => switchBSidebarPage(2);
+
+  const jumpToExport = $("btn-jump-to-export");
+  if (jumpToExport) jumpToExport.onclick = () => switchBSidebarPage(2);
+
+  const jumpToAdjust = $("btn-jump-to-adjust");
+  if (jumpToAdjust) jumpToAdjust.onclick = () => switchBSidebarPage(1);
+
+  const dotAdjust = $("dot-page-adjust");
+  const dotExport = $("dot-page-export");
+  if (dotAdjust) dotAdjust.onclick = () => switchBSidebarPage(1);
+  if (dotExport) dotExport.onclick = () => switchBSidebarPage(2);
+
+  initBSidebarSwipe();
 
   // 遮罩层点击关闭
   const backdrops = document.querySelectorAll(".sidebar-backdrop");
@@ -1640,7 +2064,7 @@ async function exportCurrentCardJson(triggerBtn) {
   const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
   if (triggerBtn) {
     triggerBtn.disabled = true;
-    triggerBtn.innerHTML = "<span>📤 正在导出卡牌...</span>";
+    triggerBtn.innerHTML = "<span>正在导出卡牌...</span>";
   }
 
   try {
@@ -1705,7 +2129,7 @@ async function exportCurrentCardJson(triggerBtn) {
     showToast("🎉 卡牌「" + cName + "」已成功导出！可在牌库一键导入");
 
     if (triggerBtn) {
-      triggerBtn.innerHTML = "<span>✅ 导出卡牌成功！</span>";
+      triggerBtn.innerHTML = "<span>导出卡牌成功！</span>";
       setTimeout(() => {
         triggerBtn.disabled = false;
         triggerBtn.innerHTML = origHtml;
@@ -1993,7 +2417,7 @@ async function saveCurrentCardToDeck(triggerBtn) {
   const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
   if (triggerBtn) {
     triggerBtn.disabled = true;
-    triggerBtn.innerHTML = "<span>💾 正在保存...</span>";
+    triggerBtn.innerHTML = "<span>正在保存...</span>";
   }
 
   try {
@@ -2053,6 +2477,7 @@ async function saveCurrentCardToDeck(triggerBtn) {
       edition: state.edition || "001 / 001",
       borderStyle: state.borderStyle || "classic-gold",
       colorTheme: state.colorTheme || "gold",
+      backStyle: state.backStyle || "ambient",
       finish: state.finish,
       cardEffect: state.cardEffect,
       subjectScale: state.subjectScale,
@@ -2081,7 +2506,7 @@ async function saveCurrentCardToDeck(triggerBtn) {
     showToast("🎉 卡牌「" + cardData.title + "」已成功保存至您的牌库！");
 
     if (triggerBtn) {
-      triggerBtn.innerHTML = "<span>✅ 已保存至牌库</span>";
+      triggerBtn.innerHTML = "<span>已保存至牌库</span>";
       setTimeout(() => {
         triggerBtn.disabled = false;
         triggerBtn.innerHTML = origHtml;
@@ -2371,6 +2796,7 @@ function syncAllInputsFromState() {
 
     setVal("border", state.borderStyle);
     setVal("theme", state.colorTheme);
+    setVal("back-style", state.backStyle || "ambient");
 
     setVal("subject-scale", state.subjectScale);
     setTxt("val-scale", state.subjectScale.toFixed(2) + "x");
@@ -2437,6 +2863,7 @@ async function loadCardFromDeck(id, silent = false) {
     state.edition = card.edition ?? state.edition;
     state.borderStyle = card.borderStyle ?? state.borderStyle;
     state.colorTheme = card.colorTheme ?? state.colorTheme;
+    state.backStyle = card.backStyle ?? "ambient";
     state.finish = card.finish ?? state.finish;
     state.cardEffect = card.cardEffect ?? "none";
     applyFinishUI(state.finish);
@@ -2564,6 +2991,7 @@ async function handleSaveCurrentChanges() {
       edition: state.edition,
       borderStyle: state.borderStyle,
       colorTheme: state.colorTheme,
+      backStyle: state.backStyle,
       finish: state.finish,
       cardEffect: state.cardEffect,
       subjectScale: state.subjectScale,
@@ -2636,7 +3064,7 @@ async function handleSaveCurrentChanges() {
       });
     }, 2000);
 
-    showToast("💾 当前卡牌修改已成功保存为默认设置！");
+    showToast("当前卡牌修改已成功保存为默认设置！");
   } catch (err) {
     console.error("Save current changes failed:", err);
     alert("保存失败: " + err.message);
@@ -2676,6 +3104,7 @@ async function initApp() {
       if (cfg.appearance?.borderStyle) state.borderStyle = cfg.appearance.borderStyle;
       if (cfg.appearance?.colorTheme) state.colorTheme = cfg.appearance.colorTheme;
       if (cfg.appearance?.cardEffect) state.cardEffect = cfg.appearance.cardEffect;
+      if (cfg.appearance?.backStyle) state.backStyle = cfg.appearance.backStyle;
       if (cfg.parameters) {
         const p = cfg.parameters;
         if (p.subjectScale !== undefined) state.subjectScale = p.subjectScale;
@@ -2871,7 +3300,7 @@ async function initApp() {
   const directDropLink = $("link-direct-netlify-drop");
   if (directDropLink) {
     directDropLink.onclick = () => {
-      showToast("🚀 正在前往 Netlify Drop，将刚才下载的 zip 直接拖入即可上线！");
+      showToast("正在前往 Netlify Drop，将刚才下载的 zip 直接拖入即可上线！");
     };
   }
 
@@ -2881,7 +3310,7 @@ async function initApp() {
       const url = "https://app.netlify.com/drop";
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(() => {
-          showToast("📋 已复制 Netlify Drop 部署网址到剪贴板！");
+          showToast("已复制 Netlify Drop 部署网址到剪贴板！");
         }).catch(() => {
           window.open(url, "_blank");
         });
@@ -2906,7 +3335,7 @@ async function initApp() {
       const url = "https://app.netlify.com/drop";
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(() => {
-          showToast("📋 已复制 Netlify Drop 部署网址到剪贴板！");
+          showToast("已复制 Netlify Drop 部署网址到剪贴板！");
         }).catch(() => {
           window.open(url, "_blank");
         });

@@ -18,7 +18,8 @@
     "finish": "pearl",
     "borderStyle": "classic-gold",
     "colorTheme": "gold",
-    "cardEffect": "prismatic_petals"
+    "cardEffect": "prismatic_petals",
+    "backStyle": "ambient"
   },
   "parameters": {
     "subjectScale": 0.8,

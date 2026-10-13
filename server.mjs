@@ -49,6 +49,7 @@ http.createServer(async (req, res) => {
           if (settings.borderStyle) currentCfg.appearance.borderStyle = settings.borderStyle;
           if (settings.colorTheme) currentCfg.appearance.colorTheme = settings.colorTheme;
           if (settings.cardEffect) currentCfg.appearance.cardEffect = settings.cardEffect;
+          if (settings.backStyle) currentCfg.appearance.backStyle = settings.backStyle;
 
           currentCfg.parameters = currentCfg.parameters || {};
           if (settings.subjectScale !== undefined) currentCfg.parameters.subjectScale = settings.subjectScale;
