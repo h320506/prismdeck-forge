@@ -107,27 +107,54 @@ npm run build
 
 ---
 
-## 🚀 部署上线至 Netlify (推荐标准流程)
+## 🚀 线上部署与托管指南 (Netlify / Cloudflare 双平台)
 
-本项目已配置完整的 **Netlify CI/CD 与云函数运行环境**，强烈推荐通过 GitHub 关联托管，体验全自动版本发布：
+本项目已全面兼容 **Netlify** 与 **Cloudflare (Workers / Pages)** 两大主流全球边缘托管平台，支持通过 GitHub 仓库关联实现代码提交全自动构建发布：
 
-### 步骤 1：推送到 GitHub
-将本项目推送到您自己的 GitHub 账号下的新建仓库（Public 或 Private 均可）。
+---
 
-### 步骤 2：在 Netlify 导入项目
+### 方案 A：部署上线至 Cloudflare (推荐，全球 Anycast CDN 加速)
+
+Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Workers 和 Pages」** 入口，本项目已内置标准 `wrangler.jsonc` 配置与 `.assetsignore` 资产过滤规则，原生支持开箱即用。
+
+#### 步骤 1：在 Cloudflare 控制台新建应用
+1. 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)；
+2. 进入左侧菜单 **「Workers 和 Pages」** -> 点击蓝色的 **「创建应用程序」** 按钮；
+3. 选择 **「连接到 Git」**，授权并选中您的 `holo-card-studio` 仓库。
+
+#### 步骤 2：配置构建与部署参数
+- **项目名称 (Project name)**：`holo-card-studio`
+- **构建命令 (Build command)**：`npm run build`
+- **部署命令 (Deploy command)**：`npx wrangler deploy`
+- **预览命令 (Preview command)**：`npx wrangler preview`
+- **高级设置 - 路径 (Root directory)**：`.`
+
+#### 步骤 3：点击「部署」完成上线
+点击 **「部署」** 按钮，系统将在 15~30 秒内完成构建并分配专属 HTTPS 域名（如 `https://holo-card-studio.xxx.workers.dev`）。
+
+> 💡 **避坑说明 (已内置防御)**：  
+> 本项目已在根目录包含 `.assetsignore` 规则，自动忽略 `node_modules` 庞大的开发依赖，避免触发 Cloudflare Workers 静态资源单个文件超过 25 MiB 的限制错误。
+
+---
+
+### 方案 B：部署上线至 Netlify (传统标准流程)
+
+本项目已配置完整的 **Netlify CI/CD 与云函数运行环境**（支持一键临时匿名展台部署通道）：
+
+#### 步骤 1：在 Netlify 导入项目
 1. 访问 [Netlify 控制台](https://app.netlify.com/) 并登录；
 2. 点击 **"Add new site"** -> **"Import an existing project"**；
-3. 选择 **GitHub** 并授权选择您刚刚创建的 `holo-card-studio` 仓库；
+3. 选择 **GitHub** 并授权选择您的 `holo-card-studio` 仓库；
 4. Netlify 会自动检测并读取仓库根目录下的 `netlify.toml`：
    - **Build command**: `npm run build`
    - **Publish directory**: `.`
    - **Functions directory**: `netlify/functions`
-5. 点击 **"Deploy holo-card-studio"**！
+5. 点击 **"Deploy holo-card-studio"**，约 30 秒即可全自动完成全球边缘分发。
 
-只需约 30 秒，Netlify 全球边缘 CDN 就会自动完成构建，并为您分配一个免费的专属 HTTPS 域名！
+---
 
 ### 步骤 3：绑定自定义独立域名（可选）
-在 Netlify 后台的 **"Domain management"** 中，添加您自己的域名（例如 `card.yourdomain.com`），配置 DNS CNAME 指向后即可拥有专属卡牌工坊网站。
+在 Netlify 或 Cloudflare 后台的域名管理中，添加您自己的域名（例如 `card.yourdomain.com`），按提示解析 DNS 即可拥有专属品牌的 3D 卡牌网站。
 
 ---
 
