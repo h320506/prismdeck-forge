@@ -757,6 +757,18 @@
 
           <!-- 模块 4: 存入牌库与导出卡牌 -->
           <section class="sidebar-section" style="padding-top: 8px; gap: 8px;">
+            <!-- 模块 4 第一项：3秒动态检视 GIF 录制 -->
+            <button id="btn-record-card-gif" class="btn-record-card-gif" type="button" title="自动录制 3 秒 3D 动态检视动图">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+              <span>录制 3 秒卡牌检视动图 (.gif)</span>
+            </button>
+            <span class="upload-box-desc" style="text-align: center; margin-top: -4px; margin-bottom: 6px;">
+              自动倾斜翻转检视光效，生成首尾无缝循环的高清 GIF，适合微信原图发送
+            </span>
+
             <button id="btn-sidebar-save-deck" class="btn-sidebar-save-deck" type="button">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
               <span>存入我的牌库</span>
@@ -1042,6 +1054,40 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         3 秒全息卡牌动态检视 GIF 预览与下载弹窗 (GIF Preview Modal)
+         ==================================================================== -->
+    <div id="modal-gif-preview" class="deck-modal hidden">
+      <div class="deck-modal-backdrop" id="gif-backdrop"></div>
+      <div class="deck-modal-dialog deploy-dialog" style="max-width: 440px !important;">
+        <div class="deck-modal-header">
+          <div class="deck-header-left">
+            <span class="sidebar-kicker">3D GIF EXPORT</span>
+            <div class="deck-title-row">
+              <h3 class="deck-modal-title">3 秒全息卡牌动图已生成</h3>
+            </div>
+          </div>
+          <button id="btn-close-gif-modal" class="sidebar-close-btn" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="deploy-dialog-content" style="align-items: center; text-align: center; gap: 12px;">
+          <div class="gif-preview-box">
+            <img id="gif-preview-img" src="" alt="全息卡牌动态检视" style="max-width: 220px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.38);" />
+          </div>
+          <div class="gif-file-info" style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+            <span id="gif-filesize-badge" class="badge-gold" style="background: rgba(197, 160, 89, 0.2); color: var(--accent, #9e7a33); padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">约 1.8 MB</span>
+            <span style="font-size: 12px; opacity: 0.75; color: #555d52;">20 FPS · 60 帧无缝循环</span>
+          </div>
+          <p class="modal-tip-text" style="font-size: 11.5px; color: #636b5f; margin: 2px 0; line-height: 1.5;">📱 手机端长按上方动图可直接保存至相册或发送微信好友；电脑端可点击下方按钮直接下载。</p>
+        </div>
+        <div class="deploy-dialog-footer" style="padding-top: 10px;">
+          <button id="btn-download-gif" class="btn-deploy-primary btn-direct-drop" type="button" style="width: 100%;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>下载 GIF 动图文件 (.gif)</span>
+          </button>
         </div>
       </div>
     </div>

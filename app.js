@@ -641,6 +641,7 @@ async function init() {
     reset,
     flip,
     saveCard,
+    recordGifFrames,
     setFinish,
     setZoom: (z) => {
       zoom = z;
@@ -1246,6 +1247,96 @@ function saveCard() {
   } catch (error) {
     console.error(error);
     notice("图片未能保存，请重试");
+  }
+}
+
+// 自动录制 3 秒 3D 全息动态检视 60 帧无缝循环像素数据 (400x560, 20fps)
+async function recordGifFrames(onFrameProgress) {
+  if (!renderer || !root || !uniforms) throw new Error("3D 渲染器未就绪");
+  const originalSize = new THREE.Vector2();
+  renderer.getSize(originalSize);
+  const originalRatio = renderer.getPixelRatio();
+  const bounds = {
+    left: camera.left,
+    right: camera.right,
+    top: camera.top,
+    bottom: camera.bottom,
+  };
+  const origRotX = root.rotation.x;
+  const origRotY = root.rotation.y;
+  const origRotZ = root.rotation.z;
+  const origPosY = root.position.y;
+  const origTime = uniforms.uTime.value;
+
+  const width = 400;
+  const height = 560;
+  const totalFrames = 60;
+  const frames = [];
+
+  const captureCanvas = document.createElement("canvas");
+  captureCanvas.width = width;
+  captureCanvas.height = height;
+  const captureCtx = captureCanvas.getContext("2d", { willReadFrequently: true });
+
+  try {
+    renderer.setPixelRatio(1);
+    renderer.setSize(width, height, false);
+    // 聚焦卡牌本体并留约 8% 舒适展示边距
+    const captureHeight = 5.6;
+    camera.left = -captureHeight * (width / height);
+    camera.right = captureHeight * (width / height);
+    camera.top = captureHeight;
+    camera.bottom = -captureHeight;
+    camera.updateProjectionMatrix();
+    root.position.y = 0;
+
+    const baseRotY = flipped ? Math.PI : 0;
+
+    for (let i = 0; i < totalFrames; i++) {
+      const progress = i / totalFrames; // 0.0 -> 0.983
+      const theta = progress * Math.PI * 2; // 0 -> 2π seamless loop
+
+      // 1. 左右偏转 (Yaw): ±20° 正弦平滑来回
+      const rotY = baseRotY + Math.sin(theta) * 0.35;
+      // 2. 前后俯仰 (Pitch): ±7° 双倍频复合，第0秒与第3秒首尾完全重合
+      const rotX = Math.sin(theta * 2) * 0.12 - 0.03;
+
+      root.rotation.x = rotX;
+      root.rotation.y = rotY;
+      root.updateMatrixWorld(true);
+
+      uniforms.uView.value
+        .copy(camera.position)
+        .applyMatrix4(inverse.copy(root.matrixWorld).invert())
+        .normalize();
+
+      // 3. 同时推进 Uniforms 使镭射扫光与粒子首尾平滑流动
+      uniforms.uTime.value = progress * 3.0;
+      shadow.scale.x = 1 - Math.abs(Math.sin(root.rotation.y)) * 0.14;
+
+      renderer.render(scene, camera);
+
+      // 捕获帧 RGBA 像素数据
+      captureCtx.drawImage(renderer.domElement, 0, 0, width, height);
+      const imgData = captureCtx.getImageData(0, 0, width, height);
+      frames.push(new Uint8Array(imgData.data.buffer));
+
+      if (typeof onFrameProgress === "function") {
+        onFrameProgress(i + 1, totalFrames, "recording");
+      }
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    return frames;
+  } finally {
+    Object.assign(camera, bounds);
+    camera.updateProjectionMatrix();
+    root.rotation.set(origRotX, origRotY, origRotZ);
+    root.position.y = origPosY;
+    uniforms.uTime.value = origTime;
+    renderer.setPixelRatio(originalRatio);
+    renderer.setSize(originalSize.x, originalSize.y, false);
+    renderer.render(scene, camera);
   }
 }
 function animate(now) {

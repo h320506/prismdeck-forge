@@ -2,6 +2,8 @@
  * site.js - 统管 Page A (工坊) 与 Page B (3D 展台) 的双向交互、半透明侧边栏与 Netlify 一键导出
  */
 import JSZip from "jszip";
+import gifenc from "gifenc";
+const { GIFEncoder, quantize, applyPalette } = gifenc;
 
 function $(id) {
   return document.getElementById(id);
@@ -1181,6 +1183,97 @@ async function handleDeployStep1Download(triggerBtn) {
   } catch (err) {
     console.error("Generate deploy package error:", err);
     alert("生成部署包失败: " + err.message);
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.innerHTML = origHtml;
+    }
+  }
+}
+
+// ==========================================================================
+// 3 秒全息卡牌动态检视 GIF 录制与导出系统 (Seamless Loop GIF Engine)
+// ==========================================================================
+
+function openGifModal() {
+  const modal = $("modal-gif-preview");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeGifModal() {
+  const modal = $("modal-gif-preview");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function recordCardGif(triggerBtn) {
+  if (!window.__holo || typeof window.__holo.recordGifFrames !== "function") {
+    alert("3D 渲染引擎未就绪，请稍后重试");
+    return;
+  }
+  const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = "<span>⏳ 正在录制动图 1/60 帧...</span>";
+  }
+
+  try {
+    // 1. 抓取 60 帧首尾咬合无缝循环画面 (400x560, 20fps)
+    const frames = await window.__holo.recordGifFrames((current, total) => {
+      if (triggerBtn) {
+        triggerBtn.innerHTML = `<span>⏳ 正在录制动图 ${current}/${total} 帧...</span>`;
+      }
+    });
+
+    if (triggerBtn) {
+      triggerBtn.innerHTML = "<span>⚡ 正在高速编码 GIF...</span>";
+    }
+    await new Promise((r) => setTimeout(r, 20));
+
+    // 2. 纯前端高保真调色板量化与快速编码
+    const gif = GIFEncoder();
+    const width = 400;
+    const height = 560;
+
+    for (let i = 0; i < frames.length; i++) {
+      const frameData = frames[i];
+      const palette = quantize(frameData, 128);
+      const index = applyPalette(frameData, palette);
+      gif.writeFrame(index, width, height, { palette, delay: 50 });
+
+      if (i % 8 === 0 && triggerBtn) {
+        triggerBtn.innerHTML = `<span>⚡ 正在编码 GIF ${Math.round((i / frames.length) * 100)}%...</span>`;
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+
+    gif.finish();
+    const bytes = gif.bytes();
+    const gifBlob = new Blob([bytes], { type: "image/gif" });
+    const sizeMb = (gifBlob.size / (1024 * 1024)).toFixed(1);
+
+    // 3. 填充预览弹窗并呈现
+    const previewImg = $("gif-preview-img");
+    const sizeBadge = $("gif-filesize-badge");
+    const downloadBtn = $("btn-download-gif");
+
+    if (previewImg) previewImg.src = URL.createObjectURL(gifBlob);
+    if (sizeBadge) sizeBadge.textContent = `约 ${sizeMb} MB`;
+    if (downloadBtn) {
+      downloadBtn.onclick = () => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(gifBlob);
+        a.download = `holo-card-${state.title || "card"}-3s-loop.gif`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showToast("GIF 动图已开始下载！");
+      };
+    }
+
+    openGifModal();
+    showToast("3 秒全息卡牌动图已生成！");
+  } catch (err) {
+    console.error("Record GIF error:", err);
+    alert("录制 GIF 动图失败: " + err.message);
   } finally {
     if (triggerBtn) {
       triggerBtn.disabled = false;
@@ -3290,6 +3383,18 @@ async function initApp() {
   if (exportViewerBtn) {
     exportViewerBtn.onclick = () => openDeployModal(1);
   }
+
+  // 3秒全息动态检视 GIF 录制按钮与弹窗绑定
+  const recordGifBtn = $("btn-record-card-gif");
+  if (recordGifBtn) {
+    recordGifBtn.onclick = () => recordCardGif(recordGifBtn);
+  }
+
+  const closeGifModalBtn = $("btn-close-gif-modal");
+  if (closeGifModalBtn) closeGifModalBtn.onclick = closeGifModal;
+
+  const gifBackdrop = $("gif-backdrop");
+  if (gifBackdrop) gifBackdrop.onclick = closeGifModal;
 
   // 部署向导弹窗内部交互
   const deployDownloadBtn = $("btn-deploy-download-pkg");
