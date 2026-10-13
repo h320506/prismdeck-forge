@@ -1,7 +1,10 @@
+# Cloudflare Workers / Pages Static Assets Ignore
 node_modules
 .git
+.github
 netlify
 *.zip
+*.log
 bundle.sh
 server.mjs
 package.json
