@@ -230,11 +230,12 @@ void main() {
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
 
-  // A+B 双层背景景深模型 (Layer A 清晰原画 1:1 饱满呈现 + Layer B 超大高斯氛围底衬)
-  vec2 buA = parallax(uv, uBgDepth);
+  // A+B 双层背景景深模型: 优雅外扩出血位 (Bleed Overscan 约 5%~8%) + Layer B 高斯氛围底衬
+  float bgBleed = clamp(abs(uBgDepth) * uDiff * 0.075, 0.025, 0.085);
+  vec2 buA = (parallax(uv, uBgDepth) - 0.5) * (1.0 / (1.0 + bgBleed * 2.0)) + 0.5;
   vec2 buB = parallax(uv, uBgDepth * 0.70);
 
-  // Layer B 连续镜像空间映射 (完全杜绝拉丝，极限转角呈现深邃高斯氛围底衬)
+  // Layer B 连续镜像空间映射 (完全保留高斯模糊底衬，极限转角呈现深邃氛围，杜绝拉丝)
   vec2 mirBuB = abs(fract(buB * 0.5 + 0.25) * 2.0 - 1.0);
   vec3 colB = texture2D(tBackgroundBlur, mirBuB).rgb;
 
@@ -243,7 +244,7 @@ void main() {
   float insideA = smoothstep(-0.015, 0.015, edgeDist);
   vec3 colA = texture2D(tBackground, clamp(buA, 0.001, 0.999)).rgb;
 
-  // 正面平视时 100% 锐利原画，极限大角度转动时自然融入深层高斯模糊底衬
+  // 平视时呈现饱满清晰原图，视差倾斜时由出血位与高斯底衬双重无缝托底
   vec3 bg = mix(colB * 0.88, colA, insideA);
   vec3 col = mix(bg, subject.rgb, subject.a);
   if (abs(uFinish - 3.0) < 0.05) col = col * vec3(1.02, .95, .78) + vec3(.05, .012, 0.0);

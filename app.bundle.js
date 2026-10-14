@@ -3918,11 +3918,12 @@ void main() {
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
 
-  // A+B \u53CC\u5C42\u80CC\u666F\u666F\u6DF1\u6A21\u578B (Layer A \u6E05\u6670\u539F\u753B 1:1 \u9971\u6EE1\u5448\u73B0 + Layer B \u8D85\u5927\u9AD8\u65AF\u6C1B\u56F4\u5E95\u886C)
-  vec2 buA = parallax(uv, uBgDepth);
+  // A+B \u53CC\u5C42\u80CC\u666F\u666F\u6DF1\u6A21\u578B: \u4F18\u96C5\u5916\u6269\u51FA\u8840\u4F4D (Bleed Overscan \u7EA6 5%~8%) + Layer B \u9AD8\u65AF\u6C1B\u56F4\u5E95\u886C
+  float bgBleed = clamp(abs(uBgDepth) * uDiff * 0.075, 0.025, 0.085);
+  vec2 buA = (parallax(uv, uBgDepth) - 0.5) * (1.0 / (1.0 + bgBleed * 2.0)) + 0.5;
   vec2 buB = parallax(uv, uBgDepth * 0.70);
 
-  // Layer B \u8FDE\u7EED\u955C\u50CF\u7A7A\u95F4\u6620\u5C04 (\u5B8C\u5168\u675C\u7EDD\u62C9\u4E1D\uFF0C\u6781\u9650\u8F6C\u89D2\u5448\u73B0\u6DF1\u9083\u9AD8\u65AF\u6C1B\u56F4\u5E95\u886C)
+  // Layer B \u8FDE\u7EED\u955C\u50CF\u7A7A\u95F4\u6620\u5C04 (\u5B8C\u5168\u4FDD\u7559\u9AD8\u65AF\u6A21\u7CCA\u5E95\u886C\uFF0C\u6781\u9650\u8F6C\u89D2\u5448\u73B0\u6DF1\u9083\u6C1B\u56F4\uFF0C\u675C\u7EDD\u62C9\u4E1D)
   vec2 mirBuB = abs(fract(buB * 0.5 + 0.25) * 2.0 - 1.0);
   vec3 colB = texture2D(tBackgroundBlur, mirBuB).rgb;
 
@@ -3931,7 +3932,7 @@ void main() {
   float insideA = smoothstep(-0.015, 0.015, edgeDist);
   vec3 colA = texture2D(tBackground, clamp(buA, 0.001, 0.999)).rgb;
 
-  // \u6B63\u9762\u5E73\u89C6\u65F6 100% \u9510\u5229\u539F\u753B\uFF0C\u6781\u9650\u5927\u89D2\u5EA6\u8F6C\u52A8\u65F6\u81EA\u7136\u878D\u5165\u6DF1\u5C42\u9AD8\u65AF\u6A21\u7CCA\u5E95\u886C
+  // \u5E73\u89C6\u65F6\u5448\u73B0\u9971\u6EE1\u6E05\u6670\u539F\u56FE\uFF0C\u89C6\u5DEE\u503E\u659C\u65F6\u7531\u51FA\u8840\u4F4D\u4E0E\u9AD8\u65AF\u5E95\u886C\u53CC\u91CD\u65E0\u7F1D\u6258\u5E95
   vec3 bg = mix(colB * 0.88, colA, insideA);
   vec3 col = mix(bg, subject.rgb, subject.a);
   if (abs(uFinish - 3.0) < 0.05) col = col * vec3(1.02, .95, .78) + vec3(.05, .012, 0.0);
