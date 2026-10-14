@@ -1,10 +1,10 @@
 {
-  "title": "八奈见杏菜",
-  "subtitle": "败犬女主太多了！",
-  "technique": "温水くん～",
-  "tagline": "あはは、温水くん",
+  "title": "洛琪希",
+  "subtitle": "无职转生～到了异世界",
+  "technique": "无吟唱水魔法",
+  "tagline": "鲁迪～",
   "edition": "001 / 001",
-  "collection": "文学部",
+  "collection": "水王级",
   "description": "全息典藏卡片",
   "font": "/system/fonts/NotoSansCJK-Regular.ttc",
   "assets": {
@@ -16,16 +16,16 @@
   },
   "appearance": {
     "finish": "pearl",
-    "borderStyle": "classic-gold",
-    "colorTheme": "gold",
-    "cardEffect": "prismatic_petals",
+    "borderStyle": "ornamental",
+    "colorTheme": "cyan",
+    "cardEffect": "star_glint",
     "backStyle": "ambient"
   },
   "parameters": {
-    "subjectScale": 0.8,
-    "subjectDepth": 0.25,
+    "subjectScale": 0.74,
+    "subjectDepth": 0.35,
     "backgroundDepth": -0.6,
-    "diff": 2,
+    "diff": 2.55,
     "effectsDepth": 0.14,
     "foil": 0.5,
     "fxGlow": 0.2,

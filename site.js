@@ -703,6 +703,53 @@ function sync3DUniforms() {
   }
 }
 
+// 丝滑局部更新流水线 (针对 Page B 高频滑条拖拽做专属 RAF 节流与防抖优化，消除 150 万像素 CPU 阻塞)
+let lineartTimer = null;
+let rafSubjectId = null;
+
+function syncSubject3D() {
+  if (!window.__holo || !window.__holo.uniforms || !rawSubjectImg) return;
+  if (rafSubjectId) cancelAnimationFrame(rafSubjectId);
+  rafSubjectId = requestAnimationFrame(() => {
+    const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
+    safeUpdateCanvasTexture(window.__holo.uniforms.tSubject, subjCvs);
+
+    // 线稿采用防抖异步合成，避免滑动主体时每帧执行耗时 60ms 的 Sobel CPU 边缘计算
+    clearTimeout(lineartTimer);
+    lineartTimer = setTimeout(() => {
+      try {
+        const lineCvs = generateLineart(subjCvs);
+        safeUpdateCanvasTexture(window.__holo.uniforms.tLine, lineCvs);
+      } catch (e) {}
+    }, 90);
+  });
+}
+
+let rafBgId = null;
+function syncBackground3D() {
+  if (!window.__holo || !window.__holo.uniforms || !rawBgImg) return;
+  if (rafBgId) cancelAnimationFrame(rafBgId);
+  rafBgId = requestAnimationFrame(() => {
+    const bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
+    safeUpdateCanvasTexture(window.__holo.uniforms.tBackground, bgCvs);
+  });
+}
+
+let rafTextId = null;
+function syncTextAndBack3D() {
+  if (!window.__holo || !window.__holo.uniforms) return;
+  if (rafTextId) cancelAnimationFrame(rafTextId);
+  rafTextId = requestAnimationFrame(() => {
+    const textCvs = drawTextCanvas(state);
+    safeUpdateCanvasTexture(window.__holo.uniforms.tText, textCvs);
+
+    if (window.__holo.uniforms.tBack) {
+      const backCvs = drawBackCanvas(state, rawBgImg, rawSubjectImg);
+      safeUpdateCanvasTexture(window.__holo.uniforms.tBack, backCvs);
+    }
+  });
+}
+
 // 同步所有图层与参数到 Page B (3D 全息视图)
 function syncTo3D() {
   if (!window.__holo || !window.THREE || !window.__holo.uniforms) return;
@@ -1453,8 +1500,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherEl = $(otherPrefix + "-" + key);
       if (otherEl) otherEl.value = e.target.value;
 
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncTextAndBack3D();
     };
   });
 
@@ -1466,8 +1513,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       state.borderStyle = e.target.value;
       const other = $(prefix === "ws" ? "b-border" : "ws-border");
       if (other) other.value = e.target.value;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncTextAndBack3D();
     };
   }
 
@@ -1478,8 +1525,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       state.colorTheme = e.target.value;
       const other = $(prefix === "ws" ? "b-theme" : "ws-theme");
       if (other) other.value = e.target.value;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncTextAndBack3D();
     };
   }
 
@@ -1490,7 +1537,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       state.backStyle = e.target.value;
       const other = $(prefix === "ws" ? "b-back-style" : "ws-back-style");
       if (other) other.value = e.target.value;
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncTextAndBack3D();
     };
   }
 
@@ -1507,8 +1555,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-scale" : "ws-val-scale");
       if (other) other.value = state.subjectScale;
       if (otherVal) otherVal.textContent = sScaleVal.textContent;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncSubject3D();
     };
   }
 
@@ -1524,8 +1572,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-x" : "ws-val-x");
       if (other) other.value = state.subjectX;
       if (otherVal) otherVal.textContent = sXVal.textContent;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncSubject3D();
     };
   }
 
@@ -1541,8 +1589,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-y" : "ws-val-y");
       if (other) other.value = state.subjectY;
       if (otherVal) otherVal.textContent = sYVal.textContent;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncSubject3D();
     };
   }
 
@@ -1567,7 +1615,7 @@ function bindSidebarInputs(prefix, isPageB = false) {
         if (yV) yV.textContent = "0px";
       });
       render2DPreview();
-      if (isPageB) syncTo3D();
+      if (isPageB) syncSubject3D();
     };
   }
 
@@ -1584,8 +1632,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-bg-scale" : "ws-val-bg-scale");
       if (other) other.value = state.bgScale;
       if (otherVal) otherVal.textContent = bScaleVal.textContent;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncBackground3D();
     };
   }
 
@@ -1601,8 +1649,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-bg-x" : "ws-val-bg-x");
       if (other) other.value = state.bgX;
       if (otherVal) otherVal.textContent = bXVal.textContent;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncBackground3D();
     };
   }
 
@@ -1618,8 +1666,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-bg-y" : "ws-val-bg-y");
       if (other) other.value = state.bgY;
       if (otherVal) otherVal.textContent = bYVal.textContent;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncBackground3D();
     };
   }
 
@@ -1635,8 +1683,8 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const otherVal = $(prefix === "ws" ? "b-val-bg-blur" : "ws-val-bg-blur");
       if (other) other.value = state.bgBlur;
       if (otherVal) otherVal.textContent = bBlurVal.textContent;
-      render2DPreview();
-      if (isPageB) syncTo3D();
+      if (!isPageB) render2DPreview();
+      if (isPageB) syncBackground3D();
     };
   }
 
@@ -1666,7 +1714,7 @@ function bindSidebarInputs(prefix, isPageB = false) {
         if (blV) blV.textContent = "0px";
       });
       render2DPreview();
-      if (isPageB) syncTo3D();
+      if (isPageB) syncBackground3D();
     };
   }
 
@@ -1856,13 +1904,17 @@ function initOpacityToggles() {
 // ==========================================================================
 let currentBSidebarPage = 1;
 
-function switchBSidebarPage(pageNum) {
+function switchBSidebarPage(pageNum, immediate = false) {
   currentBSidebarPage = pageNum === 2 ? 2 : 1;
   const carousel = $("b-sidebar-carousel");
   const tabAdjust = $("b-tab-adjust");
   const tabExport = $("b-tab-export");
   const dotAdjust = $("dot-page-adjust");
   const dotExport = $("dot-page-export");
+
+  if (immediate && carousel) {
+    carousel.classList.add("no-transition");
+  }
 
   if (currentBSidebarPage === 1) {
     if (carousel) carousel.classList.remove("show-page-2");
@@ -1888,6 +1940,11 @@ function switchBSidebarPage(pageNum) {
     }
     if (dotAdjust) dotAdjust.classList.remove("active");
     if (dotExport) dotExport.classList.add("active");
+  }
+
+  if (immediate && carousel) {
+    void carousel.offsetHeight; // 强制回流
+    carousel.classList.remove("no-transition");
   }
 }
 
@@ -1957,13 +2014,17 @@ function initDrawerToggles() {
   };
 
   const openB = () => {
-    switchBSidebarPage(1);
+    switchBSidebarPage(1, true); // 静默确保是第1页，无多余卡顿
     bSidebar?.classList.add("open");
     setBackdrops(true);
   };
   const closeB = () => {
     bSidebar?.classList.remove("open");
     setBackdrops(false);
+    // 抽屉完全滑出屏幕后，在后台静默归位第 1 页
+    setTimeout(() => {
+      switchBSidebarPage(1, true);
+    }, 320);
   };
 
   if (wsOpenBtn) wsOpenBtn.onclick = openWs;
