@@ -905,6 +905,24 @@
               自动倾斜翻转检视光效，生成首尾无缝循环的高清 GIF，适合微信原图发送
             </span>
 
+            <!-- 模块 4 第二项：1080P 60帧 MP4 动态短视频一键录制 -->
+            <button id="btn-record-card-mp4" class="btn-record-card-mp4" type="button" title="一键导出 1080P 60 帧无缝循环 MP4 动态短视频">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <line x1="2" y1="7" x2="7" y2="7"></line>
+                <line x1="2" y1="17" x2="7" y2="17"></line>
+                <line x1="17" y1="17" x2="22" y2="17"></line>
+                <line x1="17" y1="7" x2="22" y2="7"></line>
+              </svg>
+              <span>导出 1080P 60帧动态短视频 (.mp4)</span>
+            </button>
+            <span class="upload-box-desc" style="text-align: center; margin-top: -4px; margin-bottom: 6px;">
+              3秒 60帧无缝循环 1080P 超清视频，光效细节拉满，适合小红书、抖音与B站发布
+            </span>
+
             <button id="btn-sidebar-save-deck" class="btn-sidebar-save-deck" type="button">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
               <span>存入我的牌库</span>
@@ -1223,6 +1241,38 @@
           <button id="btn-download-gif" class="btn-deploy-primary btn-direct-drop" type="button" style="width: 100%;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             <span>下载 GIF 动图文件 (.gif)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1080P 60帧 MP4 视频预览与下载弹窗 -->
+    <div id="modal-mp4-preview" class="deck-modal hidden">
+      <div class="deck-modal-backdrop" id="mp4-backdrop"></div>
+      <div class="deck-modal-dialog deploy-dialog" style="max-width: 460px !important;">
+        <div class="deck-modal-header">
+          <div class="deck-header-left">
+            <span class="sidebar-kicker">1080P 60FPS VIDEO EXPORT</span>
+            <div class="deck-title-row">
+              <h3 class="deck-modal-title">1080P 全息卡牌短视频已生成</h3>
+            </div>
+          </div>
+          <button id="btn-close-mp4-modal" class="sidebar-close-btn" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="deploy-dialog-content" style="align-items: center; text-align: center; gap: 12px;">
+          <div class="gif-preview-box" style="padding: 6px; background: rgba(0,0,0,0.06); border-radius: 12px; width: 100%; display: flex; justify-content: center;">
+            <video id="mp4-preview-video" controls autoplay loop muted playsinline style="max-width: 240px; max-height: 336px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.38); display: block;"></video>
+          </div>
+          <div class="gif-file-info" style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+            <span id="mp4-filesize-badge" class="badge-gold" style="background: rgba(197, 160, 89, 0.2); color: var(--accent, #9e7a33); padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">约 3.5 MB</span>
+            <span style="font-size: 12px; opacity: 0.75; color: #555d52;">1080P · 60 FPS · 3秒无缝循环</span>
+          </div>
+          <p class="modal-tip-text" style="font-size: 11.5px; color: #636b5f; margin: 2px 0; line-height: 1.5;">🎬 标准 H.264 MP4 格式，全光效粒子无损绽放，完美兼容小红书、抖音、B站、朋友圈与相册播放。</p>
+        </div>
+        <div class="deploy-dialog-footer" style="padding-top: 10px;">
+          <button id="btn-download-mp4" class="btn-deploy-primary btn-direct-drop" type="button" style="width: 100%;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>下载 1080P MP4 视频 (.mp4)</span>
           </button>
         </div>
       </div>

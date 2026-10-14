@@ -4,6 +4,7 @@
 import JSZip from "jszip";
 import gifenc from "gifenc";
 const { GIFEncoder, quantize, applyPalette } = gifenc;
+import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 
 function $(id) {
   return document.getElementById(id);
@@ -1486,6 +1487,190 @@ async function recordCardGif(triggerBtn) {
     }
   }
 }
+
+// ==========================================================================
+// 1080P 60 帧 MP4 动态短视频录制与导出系统 (WebCodecs GPU加速 + mp4-muxer)
+// ==========================================================================
+
+function openMp4Modal() {
+  const modal = $("modal-mp4-preview");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeMp4Modal() {
+  const modal = $("modal-mp4-preview");
+  if (modal) {
+    modal.classList.add("hidden");
+    const videoEl = $("mp4-preview-video");
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.src = "";
+    }
+  }
+}
+
+async function recordCardMp4(triggerBtn) {
+  if (!window.__holo || typeof window.__holo.recordVideoFrames !== "function") {
+    alert("3D 渲染引擎未就绪，请稍后重试");
+    return;
+  }
+  const origHtml = triggerBtn ? triggerBtn.innerHTML : "";
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = "<span>⏳ 正在初始化 1080P 60FPS 编码器...</span>";
+  }
+  showToast("正在录制 3 秒 1080P 60 帧超清短视频（共 180 帧）...", 3500);
+
+  const width = 1080;
+  const height = 1512;
+  const fps = 60;
+  const totalFrames = 180;
+
+  try {
+    if (typeof VideoEncoder !== "undefined") {
+      const muxer = new Muxer({
+        target: new ArrayBufferTarget(),
+        video: {
+          codec: "avc",
+          width: width,
+          height: height
+        },
+        fastStart: "in-memory"
+      });
+
+      let encodeError = null;
+      const videoEncoder = new VideoEncoder({
+        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+        error: (e) => {
+          console.error("VideoEncoder error:", e);
+          encodeError = e;
+        }
+      });
+
+      await videoEncoder.configure({
+        codec: "avc1.640028",
+        width: width,
+        height: height,
+        bitrate: 10_000_000,
+        framerate: fps
+      });
+
+      let lastUiYield = performance.now();
+
+      await window.__holo.recordVideoFrames(width, height, totalFrames, async (canvas, i, total) => {
+        if (encodeError) throw encodeError;
+
+        const timestampUs = Math.round(i * (1_000_000 / fps));
+        const frame = new VideoFrame(canvas, { timestamp: timestampUs });
+        videoEncoder.encode(frame, { keyFrame: i % 60 === 0 });
+        frame.close();
+
+        if (i % 12 === 0 || i === total - 1) {
+          const pct = Math.round(((i + 1) / total) * 88);
+          if (triggerBtn) {
+            triggerBtn.innerHTML = `<span>⚡ 渲染与编码 ${i + 1}/${total} 帧 (${pct}%)...</span>`;
+          }
+          if (performance.now() - lastUiYield > 30) {
+            await new Promise((r) => setTimeout(r, 0));
+            lastUiYield = performance.now();
+          }
+        }
+      });
+
+      if (triggerBtn) {
+        triggerBtn.innerHTML = "<span>📦 正在封装 MP4 视频文件...</span>";
+      }
+
+      await videoEncoder.flush();
+      muxer.finalize();
+
+      const buffer = muxer.target.buffer;
+      const mp4Blob = new Blob([buffer], { type: "video/mp4" });
+      displayMp4Result(mp4Blob);
+    } else {
+      // 兼容兜底模式：MediaRecorder
+      await recordViaMediaRecorder(width, height, totalFrames, fps, triggerBtn);
+    }
+  } catch (err) {
+    console.error("Record MP4 video error:", err);
+    alert("导出 1080P MP4 视频失败: " + err.message);
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.innerHTML = origHtml;
+    }
+  }
+}
+
+// MediaRecorder 兼容兜底方案
+async function recordViaMediaRecorder(width, height, totalFrames, fps, triggerBtn) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+
+  const stream = canvas.captureStream(fps);
+  const mimeType = MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.42E01E"')
+    ? 'video/mp4; codecs="avc1.42E01E"'
+    : (MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm");
+
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 10_000_000 });
+  const chunks = [];
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+  const recordPromise = new Promise((resolve) => {
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      resolve(blob);
+    };
+  });
+
+  recorder.start();
+
+  await window.__holo.recordVideoFrames(width, height, totalFrames, async (frameCanvas, i, total) => {
+    ctx.drawImage(frameCanvas, 0, 0);
+    if (i % 12 === 0 && triggerBtn) {
+      const pct = Math.round(((i + 1) / total) * 90);
+      triggerBtn.innerHTML = `<span>⚡ 正在录制视频 ${i + 1}/${total} 帧 (${pct}%)...</span>`;
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  });
+
+  recorder.stop();
+  const videoBlob = await recordPromise;
+  displayMp4Result(videoBlob);
+}
+
+function displayMp4Result(blob) {
+  const sizeMb = (blob.size / (1024 * 1024)).toFixed(1);
+  const videoEl = $("mp4-preview-video");
+  const sizeBadge = $("mp4-filesize-badge");
+  const downloadBtn = $("btn-download-mp4");
+
+  const videoUrl = URL.createObjectURL(blob);
+  if (videoEl) {
+    videoEl.src = videoUrl;
+    videoEl.load();
+    videoEl.play().catch(() => {});
+  }
+  if (sizeBadge) {
+    sizeBadge.textContent = `约 ${sizeMb} MB · 1080P 60FPS`;
+  }
+  if (downloadBtn) {
+    downloadBtn.onclick = () => {
+      const a = document.createElement("a");
+      a.href = videoUrl;
+      const cName = state.title || "card";
+      a.download = `holo-card-${cName}-1080p-60fps.mp4`;
+      a.click();
+      showToast("1080P MP4 视频已开始下载！");
+    };
+  }
+
+  openMp4Modal();
+  showToast("🎬 1080P 60帧全息卡牌短视频已生成！");
+}
+
 
 // 导出包含工坊与展台的完整整套网站部署包 (将当前配置固化为整站默认设置)
 async function exportFullWebsiteZip(triggerBtn) {
@@ -4500,6 +4685,18 @@ async function initApp() {
 
   const gifBackdrop = $("gif-backdrop");
   if (gifBackdrop) gifBackdrop.onclick = closeGifModal;
+
+  // 1080P 60帧 MP4 动态短视频录制按钮与弹窗绑定
+  const recordMp4Btn = $("btn-record-card-mp4");
+  if (recordMp4Btn) {
+    recordMp4Btn.onclick = () => recordCardMp4(recordMp4Btn);
+  }
+
+  const closeMp4ModalBtn = $("btn-close-mp4-modal");
+  if (closeMp4ModalBtn) closeMp4ModalBtn.onclick = closeMp4Modal;
+
+  const mp4Backdrop = $("mp4-backdrop");
+  if (mp4Backdrop) mp4Backdrop.onclick = closeMp4Modal;
 
   // 部署向导弹窗内部交互
   const deployDownloadBtn = $("btn-deploy-download-pkg");

@@ -681,6 +681,7 @@ async function init() {
     updateFxTransform,
     fxMesh,
     recordGifFrames,
+    recordVideoFrames,
     setFinish,
     setZoom: (z) => {
       zoom = z;
@@ -1372,6 +1373,82 @@ async function recordGifFrames(onFrameProgress) {
     }
 
     return frames;
+  } finally {
+    Object.assign(camera, bounds);
+    camera.updateProjectionMatrix();
+    root.rotation.set(origRotX, origRotY, origRotZ);
+    root.position.y = origPosY;
+    uniforms.uTime.value = origTime;
+    renderer.setPixelRatio(originalRatio);
+    renderer.setSize(originalSize.x, originalSize.y, false);
+    renderer.render(scene, camera);
+  }
+}
+
+// 自动录制 3 秒 3D 全息动态检视 1080P 60帧视频画面 (1080x1512, 60fps)
+async function recordVideoFrames(width, height, totalFrames, onFrameProgress) {
+  if (!renderer || !root || !uniforms) throw new Error("3D 渲染器未就绪");
+  const originalSize = new THREE.Vector2();
+  renderer.getSize(originalSize);
+  const originalRatio = renderer.getPixelRatio();
+  const bounds = {
+    left: camera.left,
+    right: camera.right,
+    top: camera.top,
+    bottom: camera.bottom,
+  };
+  const origRotX = root.rotation.x;
+  const origRotY = root.rotation.y;
+  const origRotZ = root.rotation.z;
+  const origPosY = root.position.y;
+  const origTime = uniforms.uTime.value;
+
+  const captureCanvas = document.createElement("canvas");
+  captureCanvas.width = width;
+  captureCanvas.height = height;
+  const captureCtx = captureCanvas.getContext("2d", { willReadFrequently: true });
+
+  try {
+    renderer.setPixelRatio(1);
+    renderer.setSize(width, height, false);
+    const captureHeight = 5.6;
+    camera.left = -captureHeight * (width / height);
+    camera.right = captureHeight * (width / height);
+    camera.top = captureHeight;
+    camera.bottom = -captureHeight;
+    camera.updateProjectionMatrix();
+    root.position.y = 0;
+
+    const baseRotY = flipped ? Math.PI : 0;
+
+    for (let i = 0; i < totalFrames; i++) {
+      const progress = i / totalFrames;
+      const theta = progress * Math.PI * 2;
+
+      // 1. 左右偏转 (Yaw): ±20° 正弦平滑来回
+      const rotY = baseRotY + Math.sin(theta) * 0.35;
+      // 2. 前后俯仰 (Pitch): ±7° 双倍频复合，第0秒与第3秒首尾完全重合
+      const rotX = Math.sin(theta * 2) * 0.12 - 0.03;
+
+      root.rotation.x = rotX;
+      root.rotation.y = rotY;
+      root.updateMatrixWorld(true);
+
+      uniforms.uView.value
+        .copy(camera.position)
+        .applyMatrix4(inverse.copy(root.matrixWorld).invert())
+        .normalize();
+
+      uniforms.uTime.value = progress * 3.0;
+      shadow.scale.x = 1 - Math.abs(Math.sin(root.rotation.y)) * 0.14;
+
+      renderer.render(scene, camera);
+      captureCtx.drawImage(renderer.domElement, 0, 0, width, height);
+
+      if (typeof onFrameProgress === "function") {
+        await onFrameProgress(captureCanvas, i, totalFrames);
+      }
+    }
   } finally {
     Object.assign(camera, bounds);
     camera.updateProjectionMatrix();

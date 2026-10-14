@@ -13,6 +13,7 @@
     "@imgly/background-removal": "^1.7.0",
     "gifenc": "^1.0.3",
     "jszip": "^3.10.2",
+    "mp4-muxer": "^5.2.2",
     "three": "0.180.0"
   },
   "devDependencies": {
