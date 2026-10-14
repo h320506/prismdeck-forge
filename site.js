@@ -2078,6 +2078,7 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const other = $(prefix === "ws" ? "b-custom-fx-name" : "ws-custom-fx-name");
       if (other) other.value = e.target.value;
 
+      localStorage.setItem("holo_card_custom_fx_name_" + (state.activeCustomFxId || ""), state.customFxName);
       if (state.activeCustomFxId) {
         const found = customFxLibrary.find(x => x.id === state.activeCustomFxId);
         if (found) {
@@ -2102,6 +2103,7 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const other = $(prefix === "ws" ? "b-custom-back-name" : "ws-custom-back-name");
       if (other) other.value = e.target.value;
 
+      localStorage.setItem("holo_card_custom_back_name_" + (state.activeCustomBackId || ""), state.customBackName);
       if (state.activeCustomBackId) {
         const found = customBackLibrary.find(x => x.id === state.activeCustomBackId);
         if (found) {
@@ -2923,16 +2925,22 @@ async function dbDeleteCard(id) {
 
 async function dbSaveCustomFx(item) {
   const db = await openDeckDB();
+  const cleanItem = {
+    id: item.id,
+    name: item.name || "自定义特效",
+    dataUrl: item.dataUrl,
+    createdAt: item.createdAt || Date.now()
+  };
   if (!db) {
-    memoryFxStore.set(item.id, item);
-    return item;
+    memoryFxStore.set(cleanItem.id, cleanItem);
+    return cleanItem;
   }
   return new Promise((resolve, reject) => {
     try {
       const tx = db.transaction(STORE_FX, "readwrite");
       const store = tx.objectStore(STORE_FX);
-      const req = store.put(item);
-      req.onsuccess = () => resolve(item);
+      const req = store.put(cleanItem);
+      req.onsuccess = () => resolve(cleanItem);
       req.onerror = () => reject(req.error);
     } catch (e) {
       reject(e);
@@ -2977,16 +2985,22 @@ async function dbDeleteCustomFx(id) {
 
 async function dbSaveCustomBack(item) {
   const db = await openDeckDB();
+  const cleanItem = {
+    id: item.id,
+    name: item.name || "自定义卡背",
+    dataUrl: item.dataUrl,
+    createdAt: item.createdAt || Date.now()
+  };
   if (!db) {
-    memoryBacksStore.set(item.id, item);
-    return item;
+    memoryBacksStore.set(cleanItem.id, cleanItem);
+    return cleanItem;
   }
   return new Promise((resolve, reject) => {
     try {
       const tx = db.transaction(STORE_BACKS, "readwrite");
       const store = tx.objectStore(STORE_BACKS);
-      const req = store.put(item);
-      req.onsuccess = () => resolve(item);
+      const req = store.put(cleanItem);
+      req.onsuccess = () => resolve(cleanItem);
       req.onerror = () => reject(req.error);
     } catch (e) {
       reject(e);
@@ -3072,22 +3086,24 @@ async function loadCustomAssetsFromDB() {
     renderCustomFxPills();
     renderCustomBackOptions();
 
-    // 检查并恢复上次选中的自定义特效
+    // 检查并恢复上次选中的自定义特效 (持久化记忆恢复)
     const savedActiveFxId = localStorage.getItem("holo_card_active_fx_id");
-    if (savedActiveFxId) {
-      const foundFx = customFxLibrary.find(x => x.id === savedActiveFxId);
-      if (foundFx && foundFx.img && (!state.cardEffect || state.cardEffect === "none" || state.cardEffect.startsWith("custom"))) {
-        selectCustomFx(foundFx.id, true);
-      }
+    let targetFx = savedActiveFxId ? customFxLibrary.find(x => x.id === savedActiveFxId) : null;
+    if (!targetFx && customFxLibrary.length > 0 && (state.cardEffect?.startsWith("custom") || state.cardEffect === "custom")) {
+      targetFx = customFxLibrary.find(x => x.id === state.cardEffect.replace("custom_", "")) || customFxLibrary[0];
+    }
+    if (targetFx && targetFx.img) {
+      selectCustomFx(targetFx.id, true);
     }
 
-    // 检查并恢复上次选中的自定义卡背
+    // 检查并恢复上次选中的自定义卡背 (持久化记忆恢复)
     const savedActiveBackId = localStorage.getItem("holo_card_active_back_id");
-    if (savedActiveBackId) {
-      const foundBack = customBackLibrary.find(x => x.id === savedActiveBackId);
-      if (foundBack && foundBack.img && (state.backStyle === "custom" || state.backStyle?.startsWith("custom"))) {
-        selectCustomBack(foundBack.id, true);
-      }
+    let targetBack = savedActiveBackId ? customBackLibrary.find(x => x.id === savedActiveBackId) : null;
+    if (!targetBack && customBackLibrary.length > 0 && (state.backStyle?.startsWith("custom") || state.backStyle === "custom")) {
+      targetBack = customBackLibrary.find(x => x.id === state.backStyle.replace("custom_", "")) || customBackLibrary[0];
+    }
+    if (targetBack && targetBack.img) {
+      selectCustomBack(targetBack.id, true);
     }
   } catch (err) {
     console.warn("Load custom assets from IndexedDB failed:", err);
@@ -3107,14 +3123,9 @@ function renderCustomFxPills() {
       pill.dataset.effect = effKey;
       pill.type = "button";
       pill.setAttribute("aria-pressed", String(isActive));
-      pill.innerHTML = `★ <span class="custom-name">${item.name}</span><span class="pill-del-btn" title="从本地库删除该特效" data-del-fx="${item.id}">×</span>`;
+      pill.innerHTML = `★ <span class="custom-name">${item.name}</span>`;
 
-      pill.addEventListener("click", (e) => {
-        if (e.target.closest(".pill-del-btn")) {
-          e.stopPropagation();
-          deleteCustomFxItem(item.id);
-          return;
-        }
+      pill.addEventListener("click", () => {
         selectCustomFx(item.id);
       });
       container.appendChild(pill);

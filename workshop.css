@@ -2793,21 +2793,25 @@ body.is-card-expanded .stage-tools-bottom-left {
 }
 
 .btn-del-mini {
-  background: transparent;
-  border: none;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.28);
   color: #dc2626;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 15px;
-  font-weight: bold;
-  padding: 0 4px;
-  line-height: 1;
-  opacity: 0.7;
-  transition: opacity 0.15s ease;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: all 0.18s ease;
 }
 
 .btn-del-mini:hover {
-  opacity: 1;
-  transform: scale(1.15);
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
 }
 
 .effect-pill.custom-pill {
