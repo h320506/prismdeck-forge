@@ -827,6 +827,21 @@ function syncSubject3D() {
   });
 }
 
+// 构建 Layer B 超大高斯氛围底衬画布 (为大角度极限视差提供充沛的虚化底衬，彻底消灭拉丝)
+function createBlurBackdropCanvas(img) {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 768;
+  const ctx = c.getContext("2d");
+  if (img) {
+    ctx.filter = "blur(24px) saturate(135%)";
+    ctx.drawImage(img, -40, -60, 512 + 80, 768 + 120);
+  } else {
+    ctx.fillStyle = "#141615";
+    ctx.fillRect(0, 0, 512, 768);
+  }
+  return c;
+}
 let rafBgId = null;
 function syncBackground3D() {
   if (!window.__holo || !window.__holo.uniforms) return;
@@ -849,6 +864,10 @@ function syncBackground3D() {
       ctx.fillRect(0, 0, 1024, 1536);
     }
     safeUpdateCanvasTexture(window.__holo.uniforms.tBackground, bgCvs);
+    if (window.__holo.uniforms.tBackgroundBlur) {
+      const blurCvs = createBlurBackdropCanvas(rawBgImg);
+      safeUpdateCanvasTexture(window.__holo.uniforms.tBackgroundBlur, blurCvs);
+    }
   });
 }
 
@@ -890,6 +909,10 @@ function syncTo3D() {
     ctx.fillRect(0, 0, 1024, 1536);
   }
   safeUpdateCanvasTexture(window.__holo.uniforms.tBackground, bgCvs);
+  if (window.__holo.uniforms.tBackgroundBlur) {
+    const blurCvs = createBlurBackdropCanvas(rawBgImg);
+    safeUpdateCanvasTexture(window.__holo.uniforms.tBackgroundBlur, blurCvs);
+  }
 
   // 2. 主体与线稿纹理安全更新 (单素材容错：无主体时设为透明1x1网格，关闭线稿Sobel)
   if (rawSubjectImg) {

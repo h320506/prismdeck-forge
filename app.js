@@ -223,28 +223,29 @@ float sweep(vec2 uv) {
 const frontFragment =
   common +
   `
-uniform sampler2D tSubject, tBackground, tText, tLine, tEffects;
+uniform sampler2D tSubject, tBackground, tBackgroundBlur, tText, tLine, tEffects;
 void main() {
   vec2 uv = vUv;
   vec2 su = ((parallax(uv,uDepth)-.5)*uScale/uFit+.5)*uSafeScale+uSafeOffset;
-  vec2 bu = parallax(uv,uBgDepth);
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
 
-  // 极限大倾角防拉丝与深层氛围柔焦过渡 (Mirrored Repeat + Deep Bokeh Transition)
-  float outDist = max(max(-bu.x, bu.x - 1.0), max(-bu.y, bu.y - 1.0));
-  vec3 colSharp = texture2D(tBackground, bu).rgb;
+  // A+B 双层背景景深模型 (Layer A 清晰原画 1:1 饱满呈现 + Layer B 超大高斯氛围底衬)
+  vec2 buA = parallax(uv, uBgDepth);
+  vec2 buB = parallax(uv, uBgDepth * 0.70);
 
-  // 跨边界多重高斯采样：当视差突破画幅时，自然融入深邃虚化模糊背景中，完全杜绝条纹拉丝
-  vec3 colBlur = colSharp * 0.24;
-  colBlur += texture2D(tBackground, bu + vec2( 0.045,  0.035)).rgb * 0.19;
-  colBlur += texture2D(tBackground, bu + vec2(-0.040,  0.040)).rgb * 0.19;
-  colBlur += texture2D(tBackground, bu + vec2( 0.038, -0.042)).rgb * 0.19;
-  colBlur += texture2D(tBackground, bu + vec2(-0.042, -0.038)).rgb * 0.19;
+  // Layer B 连续镜像空间映射 (完全杜绝拉丝，极限转角呈现深邃高斯氛围底衬)
+  vec2 mirBuB = abs(fract(buB * 0.5 + 0.25) * 2.0 - 1.0);
+  vec3 colB = texture2D(tBackgroundBlur, mirBuB).rgb;
 
-  float blurFactor = smoothstep(0.0, 0.06, outDist);
-  vec3 bg = mix(colSharp, colBlur * 0.88, blurFactor);
-  vec3 col = mix(bg,subject.rgb,subject.a);
+  // Layer A 真实原画采样与边缘平滑融解
+  float edgeDist = min(min(buA.x, 1.0 - buA.x), min(buA.y, 1.0 - buA.y));
+  float insideA = smoothstep(-0.015, 0.015, edgeDist);
+  vec3 colA = texture2D(tBackground, clamp(buA, 0.001, 0.999)).rgb;
+
+  // 正面平视时 100% 锐利原画，极限大角度转动时自然融入深层高斯模糊底衬
+  vec3 bg = mix(colB * 0.88, colA, insideA);
+  vec3 col = mix(bg, subject.rgb, subject.a);
   if (abs(uFinish - 3.0) < 0.05) col = col * vec3(1.02, .95, .78) + vec3(.05, .012, 0.0);
   if (abs(uFinish - 4.0) < 0.05) {
     vec2 pCell = floor(uv * vec2(600., 900.));
@@ -539,6 +540,25 @@ async function init() {
   textures[1].wrapS = THREE.MirroredRepeatWrapping;
   textures[1].wrapT = THREE.MirroredRepeatWrapping;
   textures[1].needsUpdate = true;
+
+  // 构建 Layer B 超画幅高斯氛围底衬纹理 (常驻底层，防拉丝氛围光影)
+  const blurCanvas = document.createElement("canvas");
+  blurCanvas.width = 512;
+  blurCanvas.height = 768;
+  const bCtx = blurCanvas.getContext("2d");
+  if (textures[1]?.image) {
+    bCtx.filter = "blur(24px) saturate(135%)";
+    bCtx.drawImage(textures[1].image, -40, -60, 512 + 80, 768 + 120);
+  } else {
+    bCtx.fillStyle = "#141615";
+    bCtx.fillRect(0, 0, 512, 768);
+  }
+  const bgBlurTex = new THREE.CanvasTexture(blurCanvas);
+  bgBlurTex.colorSpace = THREE.NoColorSpace;
+  bgBlurTex.wrapS = THREE.MirroredRepeatWrapping;
+  bgBlurTex.wrapT = THREE.MirroredRepeatWrapping;
+  bgBlurTex.needsUpdate = true;
+
   const p = config.parameters || {};
   const sW = textures[0]?.image?.width || 1024;
   const sH = textures[0]?.image?.height || 1536;
@@ -554,6 +574,7 @@ async function init() {
   uniforms = {
     tSubject: { value: textures[0] },
     tBackground: { value: textures[1] },
+    tBackgroundBlur: { value: bgBlurTex },
     tText: { value: textures[2] },
     tLine: { value: line },
     tEffects: { value: effects },
