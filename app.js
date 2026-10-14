@@ -227,9 +227,7 @@ uniform sampler2D tSubject, tBackground, tText, tLine, tEffects;
 void main() {
   vec2 uv = vUv;
   vec2 su = ((parallax(uv,uDepth)-.5)*uScale/uFit+.5)*uSafeScale+uSafeOffset;
-  // 背景大视差智能外扩出血位 (Bleed Overscan): 根据下陷景深与晃动差速动态外扩安全画幅，彻底消除大角度倾斜下的边缘拉伸与白边露底
-  float bgBleed = clamp(abs(uBgDepth) * uDiff * 0.16, 0.04, 0.22);
-  vec2 bu = (parallax(uv, uBgDepth) - 0.5) * (1.0 / (1.0 + bgBleed * 2.0)) + 0.5;
+  vec2 bu = parallax(uv,uBgDepth);
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
   vec3 bg = texture2D(tBackground,clamp(bu,0.,1.)).rgb;

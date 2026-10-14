@@ -194,12 +194,13 @@ function fitImageToCanvas(img, scale = 1.0, offsetX = 0, offsetY = 0, transparen
 
   if (!img) return canvas;
 
-  // 背景外扩出血位辅助底层：若缩放小于1或存在偏移，底层以自然暗光弥合边缘
-  if (!transparentBg && (scale < 0.99 || offsetX !== 0 || offsetY !== 0)) {
+  // 背景边缘自然色彩延展 (根据图片边缘主色自然晕染四周，彻底消除白边与违和感)
+  if (!transparentBg) {
     ctx.save();
-    ctx.filter = "blur(20px)";
-    ctx.globalAlpha = 0.6;
-    ctx.drawImage(img, 0, 0, 1024, 1536);
+    ctx.filter = "blur(32px) saturate(120%)";
+    ctx.globalAlpha = 0.85;
+    // 放大 115% 铺底，使四周自动充满原图边缘的真实过渡色彩
+    ctx.drawImage(img, -76, -115, 1024 + 152, 1536 + 230);
     ctx.restore();
   }
 
