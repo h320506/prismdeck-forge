@@ -3918,7 +3918,21 @@ void main() {
   vec2 bu = parallax(uv,uBgDepth);
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
-  vec3 bg = texture2D(tBackground,clamp(bu,0.,1.)).rgb;
+
+  // \u6781\u9650\u5927\u503E\u89D2\u8FB9\u7F18\u9632\u62C9\u4E1D\u4E0E\u6DF1\u5C42\u6C1B\u56F4\u865A\u5316 (Ambient Bokeh Depth Transition)
+  float edgeDist = min(min(bu.x, 1.0 - bu.x), min(bu.y, 1.0 - bu.y));
+  vec2 cBu = clamp(bu, 0.015, 0.985);
+  vec3 sharpBg = texture2D(tBackground, cBu).rgb;
+
+  // \u5E7F\u89D2\u9AD8\u65AF\u67D4\u7126\u91C7\u6837 (\u5F53\u89C6\u5DEE\u7A81\u7834\u539F\u753B\u8FB9\u7F18\u65F6\u81EA\u7136\u6C89\u5165\u6DF1\u9083\u6A21\u7CCA\u80CC\u666F\uFF0C\u5F7B\u5E95\u6839\u9664\u6B7B\u677F\u62C9\u4E1D\u6761\u7EB9)
+  vec3 blurBg = sharpBg * 0.28;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2( 0.045,  0.035), 0.015, 0.985)).rgb * 0.18;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2(-0.040,  0.042), 0.015, 0.985)).rgb * 0.18;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2( 0.038, -0.045), 0.015, 0.985)).rgb * 0.18;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2(-0.042, -0.038), 0.015, 0.985)).rgb * 0.18;
+
+  float insideSharp = smoothstep(-0.03, 0.015, edgeDist);
+  vec3 bg = mix(blurBg * 0.90, sharpBg, insideSharp);
   vec3 col = mix(bg,subject.rgb,subject.a);
   if (abs(uFinish - 3.0) < 0.05) col = col * vec3(1.02, .95, .78) + vec3(.05, .012, 0.0);
   if (abs(uFinish - 4.0) < 0.05) {

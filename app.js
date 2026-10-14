@@ -230,7 +230,21 @@ void main() {
   vec2 bu = parallax(uv,uBgDepth);
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
-  vec3 bg = texture2D(tBackground,clamp(bu,0.,1.)).rgb;
+
+  // 极限大倾角边缘防拉丝与深层氛围虚化 (Ambient Bokeh Depth Transition)
+  float edgeDist = min(min(bu.x, 1.0 - bu.x), min(bu.y, 1.0 - bu.y));
+  vec2 cBu = clamp(bu, 0.015, 0.985);
+  vec3 sharpBg = texture2D(tBackground, cBu).rgb;
+
+  // 广角高斯柔焦采样 (当视差突破原画边缘时自然沉入深邃模糊背景，彻底根除死板拉丝条纹)
+  vec3 blurBg = sharpBg * 0.28;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2( 0.045,  0.035), 0.015, 0.985)).rgb * 0.18;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2(-0.040,  0.042), 0.015, 0.985)).rgb * 0.18;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2( 0.038, -0.045), 0.015, 0.985)).rgb * 0.18;
+  blurBg += texture2D(tBackground, clamp(cBu + vec2(-0.042, -0.038), 0.015, 0.985)).rgb * 0.18;
+
+  float insideSharp = smoothstep(-0.03, 0.015, edgeDist);
+  vec3 bg = mix(blurBg * 0.90, sharpBg, insideSharp);
   vec3 col = mix(bg,subject.rgb,subject.a);
   if (abs(uFinish - 3.0) < 0.05) col = col * vec3(1.02, .95, .78) + vec3(.05, .012, 0.0);
   if (abs(uFinish - 4.0) < 0.05) {
