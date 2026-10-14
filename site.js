@@ -2167,6 +2167,19 @@ function initTouchGuards() {
     });
 
     if (input) {
+      // 阻止触摸滑条手势冒泡至轮播容器，彻底杜绝向左滑动调参误切换至第2页导出中心
+      input.addEventListener("touchstart", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+      input.addEventListener("touchmove", (e) => {
+        e.stopPropagation();
+      }, { passive: true });
+      input.addEventListener("touchend", (e) => {
+        e.stopPropagation();
+        clearTimeout(activeTimer);
+        activeTimer = setTimeout(lockAll, 2500);
+      }, { passive: true });
+
       input.addEventListener("input", () => {
         clearTimeout(activeTimer);
         activeTimer = setTimeout(lockAll, 4000);
@@ -2176,10 +2189,6 @@ function initTouchGuards() {
         activeTimer = setTimeout(lockAll, 2000);
       });
       input.addEventListener("pointerup", () => {
-        clearTimeout(activeTimer);
-        activeTimer = setTimeout(lockAll, 2500);
-      });
-      input.addEventListener("touchend", () => {
         clearTimeout(activeTimer);
         activeTimer = setTimeout(lockAll, 2500);
       });
@@ -2264,7 +2273,7 @@ function switchBSidebarPage(pageNum, immediate = false) {
   }
 }
 
-// 触摸手势左右滑动监听 (Swipe View)
+// 触摸手势左右滑动监听 (Swipe View) - 严格防止滑块拖拽误触切页
 function initBSidebarSwipe() {
   const carousel = $("b-sidebar-carousel");
   if (!carousel) return;
@@ -2275,6 +2284,11 @@ function initBSidebarSwipe() {
 
   carousel.addEventListener("touchstart", (e) => {
     if (e.touches.length !== 1) return;
+    // 如果触摸起点落在滑条、输入控件、按钮或选择器上，坚决不触发轮播切页手势
+    if (e.target.closest('input, select, button, label, .slider-row, .drawer-range, .swatches, .swatch, .effect-pill, .custom-rename-row, .effect-select-row, .form-field')) {
+      isSwiping = false;
+      return;
+    }
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     isSwiping = true;
@@ -2283,13 +2297,17 @@ function initBSidebarSwipe() {
   carousel.addEventListener("touchend", (e) => {
     if (!isSwiping || e.changedTouches.length !== 1) return;
     isSwiping = false;
+    // 检查抬起点是否在滑条或交互控件上
+    if (e.target.closest('input, select, button, label, .slider-row, .drawer-range, .swatches, .swatch, .effect-pill')) {
+      return;
+    }
     const endX = e.changedTouches[0].clientX;
     const endY = e.changedTouches[0].clientY;
     const diffX = endX - startX;
     const diffY = endY - startY;
 
-    // 水平滑动距离大于 45px 且横向位移大于纵向位移的 1.3 倍，判定为有效切页滑动手势
-    if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
+    // 水平滑动距离阈值提升至 75px，且横向位移必须显著大于纵向位移 (1.6倍)，防止斜向滑动与滑动调参误触发切页
+    if (Math.abs(diffX) > 75 && Math.abs(diffX) > Math.abs(diffY) * 1.6) {
       if (diffX < 0 && currentBSidebarPage === 1) {
         // 向左轻扫：进入第 2 页（导出与发布）
         switchBSidebarPage(2);

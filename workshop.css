@@ -486,6 +486,12 @@
   position: relative;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: pan-y !important;
+}
+
+.slider-row input[type="range"],
+.drawer-range {
+  touch-action: pan-y !important;
 }
 
 /* 默认锁定状态：禁止手指直接滑动滑块，手指划过只触发页面顺畅上下滚动 */
