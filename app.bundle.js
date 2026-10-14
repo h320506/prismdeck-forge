@@ -3915,7 +3915,9 @@ uniform sampler2D tSubject, tBackground, tText, tLine, tEffects;
 void main() {
   vec2 uv = vUv;
   vec2 su = ((parallax(uv,uDepth)-.5)*uScale/uFit+.5)*uSafeScale+uSafeOffset;
-  vec2 bu = parallax(uv,uBgDepth);
+  // \u80CC\u666F\u5927\u89C6\u5DEE\u667A\u80FD\u5916\u6269\u51FA\u8840\u4F4D (Bleed Overscan): \u6839\u636E\u4E0B\u9677\u666F\u6DF1\u4E0E\u6643\u52A8\u5DEE\u901F\u52A8\u6001\u5916\u6269\u5B89\u5168\u753B\u5E45\uFF0C\u5F7B\u5E95\u6D88\u9664\u5927\u89D2\u5EA6\u503E\u659C\u4E0B\u7684\u8FB9\u7F18\u62C9\u4F38\u4E0E\u767D\u8FB9\u9732\u5E95
+  float bgBleed = clamp(abs(uBgDepth) * uDiff * 0.16, 0.04, 0.22);
+  vec2 bu = (parallax(uv, uBgDepth) - 0.5) * (1.0 / (1.0 + bgBleed * 2.0)) + 0.5;
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
   vec3 bg = texture2D(tBackground,clamp(bu,0.,1.)).rgb;

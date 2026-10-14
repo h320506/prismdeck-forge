@@ -187,11 +187,21 @@ function fitImageToCanvas(img, scale = 1.0, offsetX = 0, offsetY = 0, transparen
   if (transparentBg) {
     ctx.clearRect(0, 0, 1024, 1536);
   } else {
-    ctx.fillStyle = "#ffffff";
+    // 采用沉稳暗黑典雅底衬替代生硬白底，杜绝背景微移或缩小时露出白边
+    ctx.fillStyle = "#141615";
     ctx.fillRect(0, 0, 1024, 1536);
   }
 
   if (!img) return canvas;
+
+  // 背景外扩出血位辅助底层：若缩放小于1或存在偏移，底层以自然暗光弥合边缘
+  if (!transparentBg && (scale < 0.99 || offsetX !== 0 || offsetY !== 0)) {
+    ctx.save();
+    ctx.filter = "blur(20px)";
+    ctx.globalAlpha = 0.6;
+    ctx.drawImage(img, 0, 0, 1024, 1536);
+    ctx.restore();
+  }
 
   const w = img.naturalWidth || img.width || 1;
   const h = img.naturalHeight || img.height || 1;
