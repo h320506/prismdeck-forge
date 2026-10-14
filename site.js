@@ -90,10 +90,22 @@ const effectNames = {
   water_ripple: "💧 水波涟漪"
 };
 
-// 获取特效 Canvas 纹理生成器 (支持预设与自定义上传特效贴图)
+// 获取特效 Canvas 纹理生成器 (支持多自制特效库与预设光效)
 function getEffectCanvas(effKey) {
   if (!effKey || effKey === "none") return null;
-  const img = effKey === "custom" ? customFxImg : effectImgs[effKey];
+  if (effKey.startsWith("custom")) {
+    const fxId = effKey === "custom" ? state.activeCustomFxId : effKey.replace("custom_", "");
+    const found = customFxLibrary.find((x) => x.id === fxId) || customFxLibrary[0];
+    const img = found?.img || customFxImg;
+    if (!img) return null;
+    const cvs = document.createElement("canvas");
+    cvs.width = 1024;
+    cvs.height = 1536;
+    const ctx = cvs.getContext("2d");
+    ctx.drawImage(img, 0, 0, 1024, 1536);
+    return cvs;
+  }
+  const img = effectImgs[effKey];
   if (!img) return null;
   const cvs = document.createElement("canvas");
   cvs.width = 1024;
@@ -364,16 +376,21 @@ function drawBackCanvas(cfg, bgImg, subjImg) {
     fontDark = "#122f32";
   }
 
-  if (style === "custom" && customBackImg) {
-    const backCvs = fitImageToCanvas(customBackImg, 1.0, 0, 0, false, 0);
-    ctx.drawImage(backCvs, 0, 0);
-    ctx.strokeStyle = goldDeep;
-    ctx.lineWidth = 2.5;
-    ctx.strokeRect(56, 56, 912, 1424);
-    ctx.strokeStyle = goldBright;
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(68, 68, 888, 1400);
-    return c;
+  if (style.startsWith("custom")) {
+    const backId = style === "custom" ? state.activeCustomBackId : style.replace("custom_", "");
+    const found = customBackLibrary.find((x) => x.id === backId) || customBackLibrary[0];
+    const img = found?.img || customBackImg;
+    if (img) {
+      const backCvs = fitImageToCanvas(img, 1.0, 0, 0, false, 0);
+      ctx.drawImage(backCvs, 0, 0);
+      ctx.strokeStyle = goldDeep;
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(56, 56, 912, 1424);
+      ctx.strokeStyle = goldBright;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(68, 68, 888, 1400);
+      return c;
+    }
   }
 
   if (style === "obsidian") {
@@ -1674,10 +1691,23 @@ function bindSidebarInputs(prefix, isPageB = false) {
       const other = $(prefix === "ws" ? "b-back-style" : "ws-back-style");
       if (other) other.value = e.target.value;
 
-      const showBackRename = state.backStyle === "custom" && Boolean(customBackImg || hasCustomBack);
+      const showBackRename = state.backStyle.startsWith("custom");
+      if (showBackRename) {
+        const backId = state.backStyle === "custom" ? state.activeCustomBackId : state.backStyle.replace("custom_", "");
+        const found = customBackLibrary.find(x => x.id === backId);
+        if (found) {
+          state.activeCustomBackId = found.id;
+          state.customBackName = found.name;
+          customBackImg = found.img;
+          hasCustomBack = true;
+          localStorage.setItem("holo_card_active_back_id", found.id);
+        }
+      }
       ["ws", "b"].forEach((p) => {
         const rb = $(p + "-back-rename-box");
         if (rb) rb.style.display = showBackRename ? "flex" : "none";
+        const nameInp = $(p + "-custom-back-name");
+        if (nameInp && showBackRename) nameInp.value = state.customBackName || "自定义卡背";
       });
 
       if (!isPageB) render2DPreview();
@@ -2039,19 +2069,24 @@ function bindSidebarInputs(prefix, isPageB = false) {
     };
   }
 
-  // 7.6 自定义特效与卡背重命名输入
+  // 7.6 自定义特效与卡背重命名输入 (实时持久化至 IndexedDB 库)
   const customFxNameInput = $(prefix + "-custom-fx-name");
   if (customFxNameInput) {
     customFxNameInput.value = state.customFxName || "自定义特效";
-    customFxNameInput.oninput = (e) => {
+    customFxNameInput.oninput = async (e) => {
       state.customFxName = e.target.value.trim() || "自定义特效";
       const other = $(prefix === "ws" ? "b-custom-fx-name" : "ws-custom-fx-name");
       if (other) other.value = e.target.value;
-      ["ws", "b"].forEach((p) => {
-        const span = $(p + "-pill-custom-fx-name");
-        if (span) span.textContent = state.customFxName;
-      });
-      if (state.cardEffect === "custom") {
+
+      if (state.activeCustomFxId) {
+        const found = customFxLibrary.find(x => x.id === state.activeCustomFxId);
+        if (found) {
+          found.name = state.customFxName;
+          await dbSaveCustomFx(found);
+        }
+      }
+      renderCustomFxPills();
+      if (state.cardEffect.startsWith("custom")) {
         document.querySelectorAll(".effect-name-val").forEach((el) => {
           el.textContent = state.customFxName;
         });
@@ -2062,14 +2097,19 @@ function bindSidebarInputs(prefix, isPageB = false) {
   const customBackNameInput = $(prefix + "-custom-back-name");
   if (customBackNameInput) {
     customBackNameInput.value = state.customBackName || "自定义卡背";
-    customBackNameInput.oninput = (e) => {
+    customBackNameInput.oninput = async (e) => {
       state.customBackName = e.target.value.trim() || "自定义卡背";
       const other = $(prefix === "ws" ? "b-custom-back-name" : "ws-custom-back-name");
       if (other) other.value = e.target.value;
-      ["ws", "b"].forEach((p) => {
-        const opt = $(p + "-opt-custom-back");
-        if (opt) opt.textContent = "★ " + state.customBackName;
-      });
+
+      if (state.activeCustomBackId) {
+        const found = customBackLibrary.find(x => x.id === state.activeCustomBackId);
+        if (found) {
+          found.name = state.customBackName;
+          await dbSaveCustomBack(found);
+        }
+      }
+      renderCustomBackOptions();
     };
   }
 }
@@ -2347,7 +2387,7 @@ function initDrawerToggles() {
 }
 
 
-// 初始化卡面特效控制器 (支持自定义特效与药丸命名动态高亮)
+// 初始化卡面特效控制器 (支持多自制特效库与药丸命名动态高亮)
 function setCardEffect(eff) {
   state.cardEffect = eff || "none";
   document.querySelectorAll("[data-effect]").forEach((b) => {
@@ -2356,31 +2396,27 @@ function setCardEffect(eff) {
     b.setAttribute("aria-pressed", String(isActive));
   });
 
-  const displayName = state.cardEffect === "custom"
+  const isCustom = state.cardEffect.startsWith("custom");
+  const displayName = isCustom
     ? (state.customFxName || "★ 自定义特效")
     : (effectNames[state.cardEffect] || state.cardEffect);
   document.querySelectorAll(".effect-name-val").forEach((el) => {
     el.textContent = displayName;
   });
 
-  const hasCustom = Boolean(customFxImg || hasCustomFx);
+  const hasCustom = customFxLibrary.length > 0 || Boolean(customFxImg);
   ["ws", "b"].forEach((p) => {
-    const pill = $(p + "-pill-custom-fx");
     const renameBox = $(p + "-fx-rename-box");
-    const nameSpan = $(p + "-pill-custom-fx-name");
     const nameInput = $(p + "-custom-fx-name");
-    if (pill) {
-      pill.style.display = hasCustom ? "inline-flex" : "none";
-      if (nameSpan) nameSpan.textContent = state.customFxName || "自定义";
-    }
     if (renameBox) {
-      renameBox.style.display = (hasCustom && state.cardEffect === "custom") ? "flex" : "none";
+      renameBox.style.display = (hasCustom && isCustom) ? "flex" : "none";
     }
-    if (nameInput) {
+    if (nameInput && isCustom) {
       nameInput.value = state.customFxName || "自定义特效";
     }
   });
 
+  renderCustomFxPills();
   render2DPreview();
   syncTo3D();
 }
@@ -2744,9 +2780,13 @@ async function importCardsFromFile(file) {
 }
 
 const DB_NAME = "HoloCardVaultDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "cards";
+const STORE_FX = "custom_fx";
+const STORE_BACKS = "custom_backs";
 let memoryDeckStore = null;
+let memoryFxStore = new Map();
+let memoryBacksStore = new Map();
 
 function isIndexedDBAvailable() {
   try {
@@ -2769,6 +2809,12 @@ function openDeckDB() {
         const db = e.target.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME, { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains(STORE_FX)) {
+          db.createObjectStore(STORE_FX, { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains(STORE_BACKS)) {
+          db.createObjectStore(STORE_BACKS, { keyPath: "id" });
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -2869,6 +2915,327 @@ async function dbDeleteCard(id) {
       resolve(true);
     }
   });
+}
+
+// ==========================================================================
+// 自定义特效与卡背本地永久资产库 (Persistent Custom FX & Backs Vault)
+// ==========================================================================
+
+async function dbSaveCustomFx(item) {
+  const db = await openDeckDB();
+  if (!db) {
+    memoryFxStore.set(item.id, item);
+    return item;
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(STORE_FX, "readwrite");
+      const store = tx.objectStore(STORE_FX);
+      const req = store.put(item);
+      req.onsuccess = () => resolve(item);
+      req.onerror = () => reject(req.error);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+async function dbGetAllCustomFx() {
+  const db = await openDeckDB();
+  if (!db) return Array.from(memoryFxStore.values());
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_FX, "readonly");
+      const store = tx.objectStore(STORE_FX);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    } catch (e) {
+      resolve([]);
+    }
+  });
+}
+
+async function dbDeleteCustomFx(id) {
+  const db = await openDeckDB();
+  if (!db) {
+    memoryFxStore.delete(id);
+    return true;
+  }
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_FX, "readwrite");
+      const store = tx.objectStore(STORE_FX);
+      const req = store.delete(id);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
+
+async function dbSaveCustomBack(item) {
+  const db = await openDeckDB();
+  if (!db) {
+    memoryBacksStore.set(item.id, item);
+    return item;
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(STORE_BACKS, "readwrite");
+      const store = tx.objectStore(STORE_BACKS);
+      const req = store.put(item);
+      req.onsuccess = () => resolve(item);
+      req.onerror = () => reject(req.error);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+async function dbGetAllCustomBacks() {
+  const db = await openDeckDB();
+  if (!db) return Array.from(memoryBacksStore.values());
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_BACKS, "readonly");
+      const store = tx.objectStore(STORE_BACKS);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    } catch (e) {
+      resolve([]);
+    }
+  });
+}
+
+async function dbDeleteCustomBack(id) {
+  const db = await openDeckDB();
+  if (!db) {
+    memoryBacksStore.delete(id);
+    return true;
+  }
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_BACKS, "readwrite");
+      const store = tx.objectStore(STORE_BACKS);
+      const req = store.delete(id);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    } catch (e) {
+      resolve(false);
+    }
+  });
+}
+
+let customFxLibrary = [];
+let customBackLibrary = [];
+
+async function loadCustomAssetsFromDB() {
+  try {
+    const [fxList, backList] = await Promise.all([
+      dbGetAllCustomFx(),
+      dbGetAllCustomBacks()
+    ]);
+
+    customFxLibrary = await Promise.all(
+      (fxList || []).map(async (item) => {
+        let img = null;
+        if (item.dataUrl) {
+          img = await new Promise((res) => {
+            const i = new Image();
+            i.onload = () => res(i);
+            i.onerror = () => res(null);
+            i.src = item.dataUrl;
+          });
+        }
+        return { ...item, img };
+      })
+    );
+
+    customBackLibrary = await Promise.all(
+      (backList || []).map(async (item) => {
+        let img = null;
+        if (item.dataUrl) {
+          img = await new Promise((res) => {
+            const i = new Image();
+            i.onload = () => res(i);
+            i.onerror = () => res(null);
+            i.src = item.dataUrl;
+          });
+        }
+        return { ...item, img };
+      })
+    );
+
+    renderCustomFxPills();
+    renderCustomBackOptions();
+
+    // 检查并恢复上次选中的自定义特效
+    const savedActiveFxId = localStorage.getItem("holo_card_active_fx_id");
+    if (savedActiveFxId) {
+      const foundFx = customFxLibrary.find(x => x.id === savedActiveFxId);
+      if (foundFx && foundFx.img && (!state.cardEffect || state.cardEffect === "none" || state.cardEffect.startsWith("custom"))) {
+        selectCustomFx(foundFx.id, true);
+      }
+    }
+
+    // 检查并恢复上次选中的自定义卡背
+    const savedActiveBackId = localStorage.getItem("holo_card_active_back_id");
+    if (savedActiveBackId) {
+      const foundBack = customBackLibrary.find(x => x.id === savedActiveBackId);
+      if (foundBack && foundBack.img && (state.backStyle === "custom" || state.backStyle?.startsWith("custom"))) {
+        selectCustomBack(foundBack.id, true);
+      }
+    }
+  } catch (err) {
+    console.warn("Load custom assets from IndexedDB failed:", err);
+  }
+}
+
+function renderCustomFxPills() {
+  ["ws", "b"].forEach((prefix) => {
+    const container = $(prefix + "-custom-fx-pills-list");
+    if (!container) return;
+    container.innerHTML = "";
+    customFxLibrary.forEach((item) => {
+      const pill = document.createElement("button");
+      const effKey = "custom_" + item.id;
+      const isActive = state.cardEffect === effKey || (state.cardEffect === "custom" && state.activeCustomFxId === item.id);
+      pill.className = "effect-pill custom-pill" + (isActive ? " active" : "");
+      pill.dataset.effect = effKey;
+      pill.type = "button";
+      pill.setAttribute("aria-pressed", String(isActive));
+      pill.innerHTML = `★ <span class="custom-name">${item.name}</span><span class="pill-del-btn" title="从本地库删除该特效" data-del-fx="${item.id}">×</span>`;
+
+      pill.addEventListener("click", (e) => {
+        if (e.target.closest(".pill-del-btn")) {
+          e.stopPropagation();
+          deleteCustomFxItem(item.id);
+          return;
+        }
+        selectCustomFx(item.id);
+      });
+      container.appendChild(pill);
+    });
+  });
+}
+
+function renderCustomBackOptions() {
+  ["ws", "b"].forEach((prefix) => {
+    const group = $(prefix + "-custom-backs-group");
+    if (!group) return;
+    group.innerHTML = "";
+    customBackLibrary.forEach((item) => {
+      const opt = document.createElement("option");
+      const val = "custom_" + item.id;
+      opt.value = val;
+      opt.textContent = "★ " + item.name;
+      group.appendChild(opt);
+    });
+    const sel = $(prefix + "-back-style");
+    if (sel && state.backStyle) {
+      sel.value = state.backStyle;
+    }
+  });
+}
+
+function selectCustomFx(fxId, silent = false) {
+  const item = customFxLibrary.find((x) => x.id === fxId);
+  if (!item) return;
+  state.activeCustomFxId = item.id;
+  state.customFxName = item.name;
+  state.cardEffect = "custom_" + item.id;
+  customFxImg = item.img;
+  hasCustomFx = true;
+  setCardEffect(state.cardEffect);
+  localStorage.setItem("holo_card_active_fx_id", item.id);
+  ["ws", "b"].forEach((p) => {
+    const nameInput = $(p + "-custom-fx-name");
+    if (nameInput) nameInput.value = item.name;
+    const rb = $(p + "-fx-rename-box");
+    if (rb) rb.style.display = "flex";
+  });
+  if (!silent) showToast(`已应用自定义特效「${item.name}」`);
+}
+
+function selectCustomBack(backId, silent = false) {
+  const item = customBackLibrary.find((x) => x.id === backId);
+  if (!item) return;
+  state.activeCustomBackId = item.id;
+  state.customBackName = item.name;
+  state.backStyle = "custom_" + item.id;
+  customBackImg = item.img;
+  hasCustomBack = true;
+  ["ws", "b"].forEach((p) => {
+    const sel = $(p + "-back-style");
+    if (sel) sel.value = state.backStyle;
+    const rb = $(p + "-back-rename-box");
+    if (rb) rb.style.display = "flex";
+    const ni = $(p + "-custom-back-name");
+    if (ni) ni.value = item.name;
+  });
+  render2DPreview();
+  syncTo3D();
+  localStorage.setItem("holo_card_active_back_id", item.id);
+  if (!silent) showToast(`已应用自定义卡背「${item.name}」`);
+}
+
+async function deleteCustomFxItem(fxId) {
+  const item = customFxLibrary.find((x) => x.id === fxId);
+  const name = item ? item.name : "特效";
+  if (!confirm(`确认从本地特效库中删除「${name}」吗？`)) return;
+  await dbDeleteCustomFx(fxId);
+  customFxLibrary = customFxLibrary.filter((x) => x.id !== fxId);
+  if (state.activeCustomFxId === fxId || state.cardEffect === "custom_" + fxId) {
+    if (customFxLibrary.length > 0) {
+      selectCustomFx(customFxLibrary[0].id);
+    } else {
+      state.activeCustomFxId = null;
+      customFxImg = null;
+      hasCustomFx = false;
+      state.cardEffect = "none";
+      setCardEffect("none");
+      ["ws", "b"].forEach(p => {
+        const rb = $(p + "-fx-rename-box");
+        if (rb) rb.style.display = "none";
+      });
+      localStorage.removeItem("holo_card_active_fx_id");
+    }
+  } else {
+    renderCustomFxPills();
+  }
+  showToast(`已从本地特效库删除「${name}」`);
+}
+
+async function deleteCustomBackItem(backId) {
+  const item = customBackLibrary.find((x) => x.id === backId);
+  const name = item ? item.name : "卡背";
+  if (!confirm(`确认从本地卡背库中删除「${name}」吗？`)) return;
+  await dbDeleteCustomBack(backId);
+  customBackLibrary = customBackLibrary.filter((x) => x.id !== backId);
+  if (state.activeCustomBackId === backId || state.backStyle === "custom_" + backId) {
+    if (customBackLibrary.length > 0) {
+      selectCustomBack(customBackLibrary[0].id);
+    } else {
+      state.activeCustomBackId = null;
+      customBackImg = null;
+      hasCustomBack = false;
+      state.backStyle = "ambient";
+      ["ws", "b"].forEach((p) => {
+        const sel = $(p + "-back-style");
+        if (sel) sel.value = "ambient";
+        const rb = $(p + "-back-rename-box");
+        if (rb) rb.style.display = "none";
+      });
+      render2DPreview();
+      syncTo3D();
+      localStorage.removeItem("holo_card_active_back_id");
+    }
+  }
+  renderCustomBackOptions();
+  showToast(`已从本地卡背库删除「${name}」`);
 }
 
 async function updateDeckBadge() {
@@ -3664,6 +4031,9 @@ async function initApp() {
     previewCanvas.height = 1536;
   }
 
+  // 0. 首先载入本地 IndexedDB 中永久保存的自定义特效库与卡背库
+  await loadCustomAssetsFromDB();
+
   // 1. 优先从 card-config.json 载入基准默认设置 (确保即使在新设备/新部署上，也能开箱加载当前保存的默认值)
   try {
     const cfgRes = await fetch("./card-config.json");
@@ -3862,14 +4232,25 @@ async function initApp() {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
+          const dataUrl = evt.target.result;
           const img = new Image();
-          img.src = evt.target.result;
-          img.onload = () => {
-            customFxImg = img;
-            hasCustomFx = true;
-            state.cardEffect = "custom";
-            setCardEffect("custom");
-            showToast("✨ 已载入自定义全息特效贴图！");
+          img.src = dataUrl;
+          img.onload = async () => {
+            const fxId = "fx_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+            const count = customFxLibrary.length + 1;
+            const defaultName = "自制特效 " + count;
+            const newItem = {
+              id: fxId,
+              name: defaultName,
+              dataUrl: dataUrl,
+              createdAt: Date.now(),
+              img: img
+            };
+            await dbSaveCustomFx({ id: newItem.id, name: newItem.name, dataUrl: newItem.dataUrl, createdAt: newItem.createdAt });
+            customFxLibrary.push(newItem);
+            selectCustomFx(fxId);
+            showToast("✨ 已永久保存「" + defaultName + "」到本地特效库！可继续上传更多");
+            uploadFx.value = "";
           };
         };
         reader.readAsDataURL(file);
@@ -3879,11 +4260,12 @@ async function initApp() {
     const delFx = $(prefix + "-del-fx");
     if (delFx) {
       delFx.onclick = () => {
-        customFxImg = null;
-        hasCustomFx = false;
-        state.cardEffect = "none";
-        setCardEffect("none");
-        showToast("已清空自定义特效");
+        if (state.activeCustomFxId) {
+          deleteCustomFxItem(state.activeCustomFxId);
+        } else {
+          state.cardEffect = "none";
+          setCardEffect("none");
+        }
       };
     }
 
@@ -3894,26 +4276,25 @@ async function initApp() {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
+          const dataUrl = evt.target.result;
           const img = new Image();
-          img.src = evt.target.result;
-          img.onload = () => {
-            customBackImg = img;
-            hasCustomBack = true;
-            state.backStyle = "custom";
-            ["ws", "b"].forEach((p) => {
-              const opt = $(p + "-opt-custom-back");
-              if (opt) {
-                opt.style.display = "block";
-                opt.textContent = "★ " + (state.customBackName || "自定义卡背");
-              }
-              const sel = $(p + "-back-style");
-              if (sel) sel.value = "custom";
-              const rb = $(p + "-back-rename-box");
-              if (rb) rb.style.display = "flex";
-            });
-            render2DPreview();
-            syncTo3D();
-            showToast("✨ 已载入自定义卡背贴图！");
+          img.src = dataUrl;
+          img.onload = async () => {
+            const backId = "back_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+            const count = customBackLibrary.length + 1;
+            const defaultName = "自制卡背 " + count;
+            const newItem = {
+              id: backId,
+              name: defaultName,
+              dataUrl: dataUrl,
+              createdAt: Date.now(),
+              img: img
+            };
+            await dbSaveCustomBack({ id: newItem.id, name: newItem.name, dataUrl: newItem.dataUrl, createdAt: newItem.createdAt });
+            customBackLibrary.push(newItem);
+            selectCustomBack(backId);
+            showToast("✨ 已永久保存「" + defaultName + "」到本地卡背库！可继续上传更多");
+            uploadBack.value = "";
           };
         };
         reader.readAsDataURL(file);
@@ -3923,20 +4304,19 @@ async function initApp() {
     const delBack = $(prefix + "-del-back");
     if (delBack) {
       delBack.onclick = () => {
-        customBackImg = null;
-        hasCustomBack = false;
-        state.backStyle = "ambient";
-        ["ws", "b"].forEach((p) => {
-          const opt = $(p + "-opt-custom-back");
-          if (opt) opt.style.display = "none";
-          const sel = $(p + "-back-style");
-          if (sel) sel.value = "ambient";
-          const rb = $(p + "-back-rename-box");
-          if (rb) rb.style.display = "none";
-        });
-        render2DPreview();
-        syncTo3D();
-        showToast("已恢复默认算法卡背");
+        if (state.activeCustomBackId) {
+          deleteCustomBackItem(state.activeCustomBackId);
+        } else {
+          state.backStyle = "ambient";
+          ["ws", "b"].forEach((p) => {
+            const sel = $(p + "-back-style");
+            if (sel) sel.value = "ambient";
+            const rb = $(p + "-back-rename-box");
+            if (rb) rb.style.display = "none";
+          });
+          render2DPreview();
+          syncTo3D();
+        }
       };
     }
   });

@@ -2824,3 +2824,36 @@ body.is-card-expanded .stage-tools-bottom-left {
   box-shadow: 0 2px 8px rgba(212, 175, 55, 0.35);
 }
 
+.custom-fx-pills-list {
+  display: contents;
+}
+
+.effect-pill.custom-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pill-del-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.15);
+  color: #dc2626;
+  font-size: 11px;
+  line-height: 1;
+  margin-left: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pill-del-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  transform: scale(1.18);
+}
+
+

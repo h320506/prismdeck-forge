@@ -306,16 +306,17 @@ void main() {
 const effectsFragment = common + `
 uniform sampler2D tEffects;
 void main() {
-  vec4 art = texture2D(tEffects, vUv);
-  float alpha = art.a;
+  vec2 eu = parallax(vUv, uFxDepth);
+  vec4 art = texture2D(tEffects, clamp(eu, 0.0, 1.0));
+  float alpha = art.a * inside(eu);
   if (alpha < 0.015 || uHasFx < 0.5) discard;
   vec3 col = art.rgb;
-  vec3 foil = film(vUv);
+  vec3 foil = film(eu);
   float amount = strength();
-  float band = sweep(vUv);
+  float band = sweep(eu);
 
   // 动态全息闪耀与辉光 (随卡面转动爆发出棱镜闪斑与全息扫光)
-  float fxGlint = pow(0.5 + 0.5 * sin((vUv.x * 2.5 + vUv.y * 3.5 + uView.x * 4.0 + uView.y * 2.0) * 6.283), 6.0);
+  float fxGlint = pow(0.5 + 0.5 * sin((eu.x * 2.5 + eu.y * 3.5 + uView.x * 4.0 + uView.y * 2.0) * 6.283), 6.0);
   vec3 fxPrism = mix(art.rgb, foil, 0.35);
   vec3 fxGleam = fxPrism * (1.2 + fxGlint * 1.8 + amount * 0.8);
   vec3 glowCol = art.rgb + fxGleam * (0.35 + 0.65 * band);
@@ -610,6 +611,7 @@ async function init() {
   fxMat.side = THREE.FrontSide;
   const fxMesh = new THREE.Mesh(fxGeometry, fxMat);
   fxMesh.name = "holo_floating_fx";
+  fxMesh.renderOrder = 5;
   root.add(fxMesh);
 
   const updateFxTransform = (scale, x, y, depth, visible) => {
@@ -618,7 +620,9 @@ async function init() {
     fxMesh.scale.set(s, s, 1.0);
     const px = typeof x === "number" ? (x / 162.54) : 0;
     const py = typeof y === "number" ? (-y / 162.54) : 0;
-    const pz = 0.025 + (typeof depth === "number" ? depth : 0.14) * 0.45;
+    // 确保物理Z轴不跌入卡牌正面网格下方（防止负值景深被遮挡消失），同时负值景深由parallax视差着色器完美呈现内嵌纵深
+    const dVal = typeof depth === "number" ? depth : 0.14;
+    const pz = Math.max(0.015, 0.025 + Math.max(0.0, dVal) * 0.25);
     fxMesh.position.set(px, py, pz);
     if (visible !== undefined) fxMesh.visible = !!visible;
   };
