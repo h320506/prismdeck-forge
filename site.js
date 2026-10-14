@@ -744,10 +744,14 @@ function safeUpdateCanvasTexture(uniformTarget, newCanvas) {
   const oldTex = uniformTarget.value;
   if (oldTex && oldTex.isCanvasTexture && oldTex.image && oldTex.image.width === newCanvas.width && oldTex.image.height === newCanvas.height) {
     oldTex.image = newCanvas;
+    oldTex.wrapS = window.THREE.MirroredRepeatWrapping;
+    oldTex.wrapT = window.THREE.MirroredRepeatWrapping;
     oldTex.needsUpdate = true;
   } else {
     const newTex = new window.THREE.CanvasTexture(newCanvas);
     newTex.colorSpace = window.THREE.NoColorSpace;
+    newTex.wrapS = window.THREE.MirroredRepeatWrapping;
+    newTex.wrapT = window.THREE.MirroredRepeatWrapping;
     newTex.needsUpdate = true;
     uniformTarget.value = newTex;
     if (oldTex && typeof oldTex.dispose === "function") {

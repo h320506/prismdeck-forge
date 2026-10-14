@@ -231,20 +231,19 @@ void main() {
   vec4 subject = texture2D(tSubject,clamp(su,0.,1.));
   subject.a *= inside(su)*(1.-uRelief);
 
-  // 极限大倾角边缘防拉丝与深层氛围虚化 (Ambient Bokeh Depth Transition)
-  float edgeDist = min(min(bu.x, 1.0 - bu.x), min(bu.y, 1.0 - bu.y));
-  vec2 cBu = clamp(bu, 0.015, 0.985);
-  vec3 sharpBg = texture2D(tBackground, cBu).rgb;
+  // 极限大倾角防拉丝与深层氛围柔焦过渡 (Mirrored Repeat + Deep Bokeh Transition)
+  float outDist = max(max(-bu.x, bu.x - 1.0), max(-bu.y, bu.y - 1.0));
+  vec3 colSharp = texture2D(tBackground, bu).rgb;
 
-  // 广角高斯柔焦采样 (当视差突破原画边缘时自然沉入深邃模糊背景，彻底根除死板拉丝条纹)
-  vec3 blurBg = sharpBg * 0.28;
-  blurBg += texture2D(tBackground, clamp(cBu + vec2( 0.045,  0.035), 0.015, 0.985)).rgb * 0.18;
-  blurBg += texture2D(tBackground, clamp(cBu + vec2(-0.040,  0.042), 0.015, 0.985)).rgb * 0.18;
-  blurBg += texture2D(tBackground, clamp(cBu + vec2( 0.038, -0.045), 0.015, 0.985)).rgb * 0.18;
-  blurBg += texture2D(tBackground, clamp(cBu + vec2(-0.042, -0.038), 0.015, 0.985)).rgb * 0.18;
+  // 跨边界多重高斯采样：当视差突破画幅时，自然融入深邃虚化模糊背景中，完全杜绝条纹拉丝
+  vec3 colBlur = colSharp * 0.24;
+  colBlur += texture2D(tBackground, bu + vec2( 0.045,  0.035)).rgb * 0.19;
+  colBlur += texture2D(tBackground, bu + vec2(-0.040,  0.040)).rgb * 0.19;
+  colBlur += texture2D(tBackground, bu + vec2( 0.038, -0.042)).rgb * 0.19;
+  colBlur += texture2D(tBackground, bu + vec2(-0.042, -0.038)).rgb * 0.19;
 
-  float insideSharp = smoothstep(-0.03, 0.015, edgeDist);
-  vec3 bg = mix(blurBg * 0.90, sharpBg, insideSharp);
+  float blurFactor = smoothstep(0.0, 0.06, outDist);
+  vec3 bg = mix(colSharp, colBlur * 0.88, blurFactor);
   vec3 col = mix(bg,subject.rgb,subject.a);
   if (abs(uFinish - 3.0) < 0.05) col = col * vec3(1.02, .95, .78) + vec3(.05, .012, 0.0);
   if (abs(uFinish - 4.0) < 0.05) {
@@ -536,6 +535,10 @@ async function init() {
     t.colorSpace = THREE.NoColorSpace;
     t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   });
+  // 背景纹理开启镜像包裹，彻底从底层根除大倾角下的单像素边缘拉丝
+  textures[1].wrapS = THREE.MirroredRepeatWrapping;
+  textures[1].wrapT = THREE.MirroredRepeatWrapping;
+  textures[1].needsUpdate = true;
   const p = config.parameters || {};
   const sW = textures[0]?.image?.width || 1024;
   const sH = textures[0]?.image?.height || 1536;
