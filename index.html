@@ -93,18 +93,31 @@
               </h3>
 
               <div class="upload-slot-grid">
-                <label class="upload-box" for="ws-upload-subject">
-                  <input type="file" id="ws-upload-subject" accept="image/*" />
-                  <svg class="upload-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <span class="upload-box-title">主体 (透明 PNG)</span>
-                </label>
+                <div class="upload-slot-item">
+                  <label class="upload-box" for="ws-upload-subject">
+                    <input type="file" id="ws-upload-subject" accept="image/*" />
+                    <svg class="upload-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span class="upload-box-title">主体 (透明 PNG)</span>
+                    <span class="upload-box-desc" id="ws-status-subject">已就绪 (可移除)</span>
+                  </label>
+                  <button type="button" class="btn-clear-slot" id="ws-del-subject" title="删除/移除主体素材">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                    <span>删除主体</span>
+                  </button>
+                </div>
 
-                <label class="upload-box" for="ws-upload-bg">
-                  <input type="file" id="ws-upload-bg" accept="image/*" />
-                  <svg class="upload-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                  <span class="upload-box-title">背景插画</span>
-                  <span class="upload-box-desc">任意比例自动适配</span>
-                </label>
+                <div class="upload-slot-item">
+                  <label class="upload-box" for="ws-upload-bg">
+                    <input type="file" id="ws-upload-bg" accept="image/*" />
+                    <svg class="upload-box-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    <span class="upload-box-title">背景插画</span>
+                    <span class="upload-box-desc" id="ws-status-bg">已就绪 (可移除)</span>
+                  </label>
+                  <button type="button" class="btn-clear-slot" id="ws-del-bg" title="删除/移除背景素材">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                    <span>删除背景</span>
+                  </button>
+                </div>
               </div>
 
               <!-- 快捷免登录抠图辅助轻量引导链接 -->
@@ -231,6 +244,43 @@
                     <button class="effect-pill" data-effect="brushed_sheen" type="button">☀️ 放射</button>
                     <button class="effect-pill" data-effect="gold_leaf" type="button">🍂 金箔</button>
                     <button class="effect-pill" data-effect="water_ripple" type="button">💧 水波</button>
+                    <button class="effect-pill custom-pill" data-effect="custom" id="ws-pill-custom-fx" style="display:none;" type="button">★ <span id="ws-pill-custom-fx-name">自定义</span></button>
+                  </div>
+
+                  <!-- 侧边栏内卡面特效贴图上传与自定义重命名 -->
+                  <div class="fx-custom-actions">
+                    <label class="btn-upload-subtle" for="ws-upload-fx" title="上传自定义全息特效透明图 (PNG)">
+                      <input type="file" id="ws-upload-fx" accept="image/*" style="display:none;" />
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                      <span>+ 上传自定义特效</span>
+                    </label>
+                    <div class="custom-rename-row" id="ws-fx-rename-box" style="display:none;">
+                      <span class="rename-label">特效名:</span>
+                      <input type="text" id="ws-custom-fx-name" class="rename-input" placeholder="输入特效名称..." maxlength="14" />
+                      <button type="button" class="btn-del-mini" id="ws-del-fx" title="清空/删除自定义特效">×</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 特效破框与构图微调 (自由放大缩小与位置调整) -->
+                <div class="slider-group" style="margin-top: 10px;">
+                  <div class="section-subrow">
+                    <span class="field-label" style="color: var(--accent); font-size: 12px;">特效破框构图 (支持突破卡面)</span>
+                    <button id="ws-reset-fx-pos" class="link-btn" type="button">重置位置</button>
+                  </div>
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>特效缩放 (破框放大)</span><output id="ws-val-fx-scale">1.00x</output></div>
+                    <input id="ws-fx-scale" type="range" min="0.30" max="2.50" step="0.05" value="1.00" class="drawer-range" />
+                  </div>
+                  <div class="form-grid-2">
+                    <div class="slider-row">
+                      <div class="slider-label-row"><span>水平 (X)</span><output id="ws-val-fx-x">0px</output></div>
+                      <input id="ws-fx-x" type="range" min="-600" max="600" step="5" value="0" class="drawer-range" />
+                    </div>
+                    <div class="slider-row">
+                      <div class="slider-label-row"><span>垂直 (Y)</span><output id="ws-val-fx-y">0px</output></div>
+                      <input id="ws-fx-y" type="range" min="-600" max="600" step="5" value="0" class="drawer-range" />
+                    </div>
                   </div>
                 </div>
 
@@ -318,7 +368,22 @@
                   <option value="minimal">极简馆藏印鉴 (高雅象牙白)</option>
                   <option value="obsidian">黑曜晶石鎏金 (暗黑轻奢)</option>
                   <option value="silhouette">角色剪影图腾 (专属印记)</option>
+                  <option value="custom" id="ws-opt-custom-back" style="display:none;">★ 自定义卡背图案</option>
                 </select>
+
+                <!-- 侧边栏内卡背贴图上传与自定义重命名 -->
+                <div class="back-custom-actions">
+                  <label class="btn-upload-subtle" for="ws-upload-back" title="上传自定义卡背插画或纹理">
+                    <input type="file" id="ws-upload-back" accept="image/*" style="display:none;" />
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>+ 上传卡背图案</span>
+                  </label>
+                  <div class="custom-rename-row" id="ws-back-rename-box" style="display:none;">
+                    <span class="rename-label">卡背面:</span>
+                    <input type="text" id="ws-custom-back-name" class="rename-input" placeholder="输入卡背名称..." maxlength="14" />
+                    <button type="button" class="btn-del-mini" id="ws-del-back" title="清空/删除自定义卡背">×</button>
+                  </div>
+                </div>
               </div>
 
               <!-- 长条按钮：保存当前修改 -->
@@ -656,6 +721,43 @@
                     <button class="effect-pill" data-effect="brushed_sheen" type="button">☀️ 放射</button>
                     <button class="effect-pill" data-effect="gold_leaf" type="button">🍂 金箔</button>
                     <button class="effect-pill" data-effect="water_ripple" type="button">💧 水波</button>
+                    <button class="effect-pill custom-pill" data-effect="custom" id="b-pill-custom-fx" style="display:none;" type="button">★ <span id="b-pill-custom-fx-name">自定义</span></button>
+                  </div>
+
+                  <!-- 侧边栏内卡面特效贴图上传与自定义重命名 -->
+                  <div class="fx-custom-actions">
+                    <label class="btn-upload-subtle" for="b-upload-fx" title="上传自定义全息特效透明图 (PNG)">
+                      <input type="file" id="b-upload-fx" accept="image/*" style="display:none;" />
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                      <span>+ 上传自定义特效</span>
+                    </label>
+                    <div class="custom-rename-row" id="b-fx-rename-box" style="display:none;">
+                      <span class="rename-label">特效名:</span>
+                      <input type="text" id="b-custom-fx-name" class="rename-input" placeholder="输入特效名称..." maxlength="14" />
+                      <button type="button" class="btn-del-mini" id="b-del-fx" title="清空/删除自定义特效">×</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 特效破框与构图微调 (自由放大缩小与位置调整) -->
+                <div class="slider-group" style="margin-top: 10px;">
+                  <div class="section-subrow">
+                    <span class="field-label" style="color: var(--accent); font-size: 12px;">特效破框构图 (支持突破卡面)</span>
+                    <button id="b-reset-fx-pos" class="link-btn" type="button">重置居中</button>
+                  </div>
+                  <div class="slider-row">
+                    <div class="slider-label-row"><span>特效缩放 (破框放大)</span><output id="b-val-fx-scale">1.00x</output></div>
+                    <input id="b-fx-scale" type="range" min="0.30" max="2.50" step="0.05" value="1.00" class="drawer-range" />
+                  </div>
+                  <div class="form-grid-2">
+                    <div class="slider-row">
+                      <div class="slider-label-row"><span>水平 (X)</span><output id="b-val-fx-x">0px</output></div>
+                      <input id="b-fx-x" type="range" min="-600" max="600" step="5" value="0" class="drawer-range" />
+                    </div>
+                    <div class="slider-row">
+                      <div class="slider-label-row"><span>垂直 (Y)</span><output id="b-val-fx-y">0px</output></div>
+                      <input id="b-fx-y" type="range" min="-600" max="600" step="5" value="0" class="drawer-range" />
+                    </div>
                   </div>
                 </div>
 
@@ -743,7 +845,22 @@
                 <option value="minimal">极简馆藏印鉴 (高雅象牙白)</option>
                 <option value="obsidian">黑曜晶石鎏金 (暗黑轻奢)</option>
                 <option value="silhouette">角色剪影图腾 (专属印记)</option>
+                <option value="custom" id="b-opt-custom-back" style="display:none;">★ 自定义卡背图案</option>
               </select>
+
+              <!-- 侧边栏内卡背贴图上传与自定义重命名 -->
+              <div class="back-custom-actions">
+                <label class="btn-upload-subtle" for="b-upload-back" title="上传自定义卡背插画或纹理">
+                  <input type="file" id="b-upload-back" accept="image/*" style="display:none;" />
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span>+ 上传卡背图案</span>
+                </label>
+                <div class="custom-rename-row" id="b-back-rename-box" style="display:none;">
+                  <span class="rename-label">卡背面:</span>
+                  <input type="text" id="b-custom-back-name" class="rename-input" placeholder="输入卡背名称..." maxlength="14" />
+                  <button type="button" class="btn-del-mini" id="b-del-back" title="清空/删除自定义卡背">×</button>
+                </div>
+              </div>
             </div>
 
             <!-- 长条按钮：保存当前修改 -->

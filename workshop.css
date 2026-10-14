@@ -2685,3 +2685,142 @@ body.is-card-expanded .stage-tools-bottom-left {
 
 
 
+
+/* ==========================================================================
+   4 大素材自由装配、清空与侧边栏特效/卡背直传重命名样式
+   ========================================================================== */
+
+.upload-slot-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-clear-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  color: #b91c1c;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-slot:hover {
+  background: rgba(220, 38, 38, 0.16);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #991b1b;
+  transform: translateY(-1px);
+}
+
+.btn-clear-slot.is-cleared {
+  opacity: 0.45;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--muted, #7c8874);
+}
+
+/* 侧边栏内卡面特效与卡背上传及重命名样式 */
+.fx-custom-actions,
+.back-custom-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.btn-upload-subtle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1.2px dashed var(--accent, #9e7a33);
+  background: rgba(197, 160, 89, 0.08);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent, #9e7a33);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-upload-subtle:hover {
+  background: rgba(197, 160, 89, 0.18);
+  border-color: var(--gold-bright, #f4d087);
+  transform: translateY(-1px);
+}
+
+.custom-rename-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.035);
+  padding: 4px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(197, 160, 89, 0.3);
+}
+
+.rename-label {
+  font-size: 11px;
+  color: var(--muted, #7c8874);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #20261b);
+  padding: 2px 4px;
+  outline: none;
+}
+
+.rename-input:focus {
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 4px;
+}
+
+.btn-del-mini {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: bold;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.btn-del-mini:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.effect-pill.custom-pill {
+  border-color: rgba(212, 175, 55, 0.55);
+  background: rgba(197, 160, 89, 0.12);
+  color: var(--accent, #9e7a33);
+  font-weight: 600;
+}
+
+.effect-pill.custom-pill.active {
+  background: linear-gradient(135deg, #2b2823 0%, #171614 100%) !important;
+  color: #f7eedb !important;
+  border-color: #d4af37 !important;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.35);
+}
+

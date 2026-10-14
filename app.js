@@ -242,24 +242,7 @@ void main() {
   float amount = strength();
   float band = sweep(uv);
 
-  // Effects layer floats between the subject and the text: above the character,
-  // below the typography, with its own mid-depth parallax.
-  vec2 eu = parallax(uv,uFxDepth);
-  vec4 fx = texture2D(tEffects,clamp(eu,0.,1.));
-  if (uHasFx > 0.5 && fx.a > 0.005) {
-    // 1. 纯净平光 (与 A 页面 2D 画布完全一致的温润原色与清晰边缘)
-    vec3 cleanCol = mix(col, fx.rgb, fx.a * (1.0 - uRelief));
-
-    // 2. 动态全息闪耀与辉光 (随卡面转动爆发出棱镜闪斑与全息扫光)
-    float fxGlint = pow(0.5 + 0.5 * sin((eu.x * 2.5 + eu.y * 3.5 + uView.x * 4.0 + uView.y * 2.0) * 6.283), 6.0);
-    vec3 fxPrism = mix(fx.rgb, film(eu), 0.35);
-    vec3 fxGleam = fxPrism * (1.2 + fxGlint * 1.8 + amount * 0.8);
-    vec3 screened = 1.0 - (1.0 - col) * (1.0 - clamp(fxGleam, 0.0, 1.0));
-    vec3 glowCol = mix(col, screened, fx.a * (1.0 - uRelief)) + fxGleam * fx.a * (0.35 + 0.65 * band);
-
-    // 3. 自由从「纯净平光」(0.0) 平滑调节至「璀璨发光」(1.0)
-    col = mix(cleanCol, glowCol, clamp(uFxGlow, 0.0, 1.0));
-  }
+  // 注：全息卡面特效已由独立 3D 浮空网格 (fxMesh) 承载渲染，可自由突破卡牌外边缘实现破框悬浮
   float luminance = dot(col,vec3(.2126,.7152,.0722));
   // Laminate changes with the card-local viewing direction; black print stays readable.
   float goldBoost = abs(uFinish - 3.0) < 0.05 ? 1.7 : 1.0;
@@ -323,14 +306,22 @@ void main() {
 const effectsFragment = common + `
 uniform sampler2D tEffects;
 void main() {
-  vec4 art=texture2D(tEffects,vUv);
-  // The relief effects layer is a pre-cut RGBA asset: use its real alpha so
-  // thorn/spark deco keeps its silhouette instead of a color-channel matte.
-  float alpha=art.a;
-  if(alpha<.015)discard;
-  vec3 col=art.rgb;
-  col+=film(vUv)*sweep(vUv)*strength()*.08;
-  gl_FragColor=vec4(pow(clamp(col,0.,1.),vec3(2.2)),alpha);
+  vec4 art = texture2D(tEffects, vUv);
+  float alpha = art.a;
+  if (alpha < 0.015 || uHasFx < 0.5) discard;
+  vec3 col = art.rgb;
+  vec3 foil = film(vUv);
+  float amount = strength();
+  float band = sweep(vUv);
+
+  // 动态全息闪耀与辉光 (随卡面转动爆发出棱镜闪斑与全息扫光)
+  float fxGlint = pow(0.5 + 0.5 * sin((vUv.x * 2.5 + vUv.y * 3.5 + uView.x * 4.0 + uView.y * 2.0) * 6.283), 6.0);
+  vec3 fxPrism = mix(art.rgb, foil, 0.35);
+  vec3 fxGleam = fxPrism * (1.2 + fxGlint * 1.8 + amount * 0.8);
+  vec3 glowCol = art.rgb + fxGleam * (0.35 + 0.65 * band);
+
+  col = mix(art.rgb, glowCol, clamp(uFxGlow, 0.0, 1.0));
+  gl_FragColor = vec4(pow(clamp(col, 0.0, 1.0), vec3(2.2)), alpha);
   #include <colorspace_fragment>
 }
 `;
@@ -492,6 +483,11 @@ async function init() {
   textureLoader.crossOrigin = undefined;
 
   const loadTextureSafe = async (url) => {
+    if (!url) {
+      const t = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
+      t.needsUpdate = true;
+      return t;
+    }
     try {
       return await textureLoader.loadAsync(url);
     } catch (e) {
@@ -526,7 +522,9 @@ async function init() {
     t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   });
   const p = config.parameters || {};
-  const imageAspect = textures[0].image.width / textures[0].image.height;
+  const sW = textures[0]?.image?.width || 1024;
+  const sH = textures[0]?.image?.height || 1536;
+  const imageAspect = sW / sH;
   const fit =
     config.artworkFit ||
     (config.sourceMode === "reference"
@@ -603,6 +601,35 @@ async function init() {
     mesh.userData.baseScale=mesh.scale.clone();
   }
   if (config.sourceMode === "relief" && !reliefLayers.subject.length) throw Error("缺少独立人物层，请重新生成模型");
+
+  // 创建可突破卡牌原本物理边界的 3D 全息悬浮光效网格 (fxMesh)
+  const fxGeometry = new THREE.PlaneGeometry(6.30, 9.45);
+  const fxMat = material(effectsFragment);
+  fxMat.transparent = true;
+  fxMat.depthWrite = false;
+  fxMat.side = THREE.FrontSide;
+  const fxMesh = new THREE.Mesh(fxGeometry, fxMat);
+  fxMesh.name = "holo_floating_fx";
+  root.add(fxMesh);
+
+  const updateFxTransform = (scale, x, y, depth, visible) => {
+    if (!fxMesh) return;
+    const s = typeof scale === "number" ? scale : 1.0;
+    fxMesh.scale.set(s, s, 1.0);
+    const px = typeof x === "number" ? (x / 162.54) : 0;
+    const py = typeof y === "number" ? (-y / 162.54) : 0;
+    const pz = 0.025 + (typeof depth === "number" ? depth : 0.14) * 0.45;
+    fxMesh.position.set(px, py, pz);
+    if (visible !== undefined) fxMesh.visible = !!visible;
+  };
+  updateFxTransform(
+    p.fxScale ?? 1.0,
+    p.fxX ?? 0,
+    p.fxY ?? 0,
+    p.effectsDepth ?? 0.14,
+    hasFx
+  );
+
   addShadow();
   const settingsHome=$('parameter-panel').parentElement;
   const responsiveSettings=()=>{
@@ -647,6 +674,8 @@ async function init() {
     reset,
     flip,
     saveCard,
+    updateFxTransform,
+    fxMesh,
     recordGifFrames,
     setFinish,
     setZoom: (z) => {

@@ -19,9 +19,14 @@ const state = {
   edition: "001 / 001",
   finish: "pearl",
   cardEffect: "none",
+  customFxName: "自定义特效",
+  fxScale: 1.0,
+  fxX: 0,
+  fxY: 0,
   borderStyle: "classic-gold",
   colorTheme: "gold",
   backStyle: "ambient",
+  customBackName: "自定义卡背",
   subjectScale: 1.0,
   subjectX: 0,
   subjectY: 0,
@@ -39,9 +44,13 @@ const state = {
 
 let rawSubjectImg = null;
 let rawBgImg = null;
+let customFxImg = null;
+let customBackImg = null;
 let activeCardId = null;
 let hasCustomSubject = false;
 let hasCustomBg = false;
+let hasCustomFx = false;
+let hasCustomBack = false;
 
 // 卡面特效预设资源与预加载
 const effectSources = {
@@ -81,10 +90,10 @@ const effectNames = {
   water_ripple: "💧 水波涟漪"
 };
 
-// 获取特效 Canvas 纹理生成器
+// 获取特效 Canvas 纹理生成器 (支持预设与自定义上传特效贴图)
 function getEffectCanvas(effKey) {
   if (!effKey || effKey === "none") return null;
-  const img = effectImgs[effKey];
+  const img = effKey === "custom" ? customFxImg : effectImgs[effKey];
   if (!img) return null;
   const cvs = document.createElement("canvas");
   cvs.width = 1024;
@@ -353,6 +362,18 @@ function drawBackCanvas(cfg, bgImg, subjImg) {
     goldBright = "#99f6e4";
     goldDeep = "#14b8a6";
     fontDark = "#122f32";
+  }
+
+  if (style === "custom" && customBackImg) {
+    const backCvs = fitImageToCanvas(customBackImg, 1.0, 0, 0, false, 0);
+    ctx.drawImage(backCvs, 0, 0);
+    ctx.strokeStyle = goldDeep;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(56, 56, 912, 1424);
+    ctx.strokeStyle = goldBright;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(68, 68, 888, 1400);
+    return c;
   }
 
   if (style === "obsidian") {
@@ -635,33 +656,46 @@ function render2DPreview() {
 
   ctx.clearRect(0, 0, w, h);
 
-  // 1. 绘制背景 (支持缩放、位移与模糊)
+  // 1. 绘制背景 (支持缩放、位移与模糊，无背景时显示典雅暗色背景)
   if (rawBgImg) {
     const bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
     ctx.drawImage(bgCvs, 0, 0);
   } else {
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#141615";
+    ctx.fillRect(0, 0, w, h);
+    const rad = ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, 700);
+    rad.addColorStop(0, "rgba(255, 255, 255, 0.04)");
+    rad.addColorStop(1, "rgba(0, 0, 0, 0.65)");
+    ctx.fillStyle = rad;
     ctx.fillRect(0, 0, w, h);
   }
 
-  // 2. 绘制主体 (支持缩放与位移)
+  // 2. 绘制主体 (支持缩放与位移，无主体时优雅跳过)
   if (rawSubjectImg) {
     const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
     ctx.drawImage(subjCvs, 0, 0);
   }
 
-  // 2.5 绘制卡面特效 (碎钻、星芒、光尘、光烬、碎羽、冰晶、放射、金箔、水波)
+  // 2.5 绘制卡面特效 (支持自由缩放、破框位移与辉光)
   if (state.cardEffect && state.cardEffect !== "none") {
     const fxCvs = getEffectCanvas(state.cardEffect);
     if (fxCvs) {
       ctx.save();
+      const fxScale = state.fxScale ?? 1.0;
+      const fxX = state.fxX ?? 0;
+      const fxY = state.fxY ?? 0;
+      const dw = w * fxScale;
+      const dh = h * fxScale;
+      const dx = (w - dw) / 2 + fxX;
+      const dy = (h - dh) / 2 + fxY;
+
       ctx.globalCompositeOperation = "source-over";
-      ctx.drawImage(fxCvs, 0, 0, w, h);
+      ctx.drawImage(fxCvs, dx, dy, dw, dh);
       const glowAmt = state.fxGlow ?? 0.5;
       if (glowAmt > 0.01) {
         ctx.globalCompositeOperation = "screen";
         ctx.globalAlpha = 0.65 * glowAmt;
-        ctx.drawImage(fxCvs, 0, 0, w, h);
+        ctx.drawImage(fxCvs, dx, dy, dw, dh);
       }
       ctx.restore();
     }
@@ -703,6 +737,15 @@ function sync3DUniforms() {
   if (state.finish && typeof window.__holo.setFinish === "function") {
     window.__holo.setFinish(state.finish);
   }
+  if (typeof window.__holo.updateFxTransform === "function") {
+    window.__holo.updateFxTransform(
+      state.fxScale ?? 1.0,
+      state.fxX ?? 0,
+      state.fxY ?? 0,
+      state.effectsDepth ?? 0.14,
+      state.cardEffect && state.cardEffect !== "none"
+    );
+  }
 }
 
 // 动态刷新作品信息弹窗内容 (与当前卡牌标题、出处与编号实时同步)
@@ -721,29 +764,54 @@ let lineartTimer = null;
 let rafSubjectId = null;
 
 function syncSubject3D() {
-  if (!window.__holo || !window.__holo.uniforms || !rawSubjectImg) return;
+  if (!window.__holo || !window.__holo.uniforms) return;
   if (rafSubjectId) cancelAnimationFrame(rafSubjectId);
   rafSubjectId = requestAnimationFrame(() => {
-    const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
-    safeUpdateCanvasTexture(window.__holo.uniforms.tSubject, subjCvs);
+    if (rawSubjectImg) {
+      const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
+      safeUpdateCanvasTexture(window.__holo.uniforms.tSubject, subjCvs);
+      if (window.__holo.uniforms.uHasLine) window.__holo.uniforms.uHasLine.value = 1.0;
 
-    // 线稿采用防抖异步合成，避免滑动主体时每帧执行耗时 60ms 的 Sobel CPU 边缘计算
-    clearTimeout(lineartTimer);
-    lineartTimer = setTimeout(() => {
-      try {
-        const lineCvs = generateLineart(subjCvs);
-        safeUpdateCanvasTexture(window.__holo.uniforms.tLine, lineCvs);
-      } catch (e) {}
-    }, 90);
+      // 线稿采用防抖异步合成，避免滑动主体时每帧执行耗时 60ms 的 Sobel CPU 边缘计算
+      clearTimeout(lineartTimer);
+      lineartTimer = setTimeout(() => {
+        try {
+          const lineCvs = generateLineart(subjCvs);
+          safeUpdateCanvasTexture(window.__holo.uniforms.tLine, lineCvs);
+        } catch (e) {}
+      }, 90);
+    } else {
+      const emptyCvs = document.createElement("canvas");
+      emptyCvs.width = 1;
+      emptyCvs.height = 1;
+      safeUpdateCanvasTexture(window.__holo.uniforms.tSubject, emptyCvs);
+      safeUpdateCanvasTexture(window.__holo.uniforms.tLine, emptyCvs);
+      if (window.__holo.uniforms.uHasLine) window.__holo.uniforms.uHasLine.value = 0.0;
+    }
   });
 }
 
 let rafBgId = null;
 function syncBackground3D() {
-  if (!window.__holo || !window.__holo.uniforms || !rawBgImg) return;
+  if (!window.__holo || !window.__holo.uniforms) return;
   if (rafBgId) cancelAnimationFrame(rafBgId);
   rafBgId = requestAnimationFrame(() => {
-    const bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
+    let bgCvs;
+    if (rawBgImg) {
+      bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
+    } else {
+      bgCvs = document.createElement("canvas");
+      bgCvs.width = 1024;
+      bgCvs.height = 1536;
+      const ctx = bgCvs.getContext("2d");
+      ctx.fillStyle = "#141615";
+      ctx.fillRect(0, 0, 1024, 1536);
+      const rad = ctx.createRadialGradient(512, 768, 50, 512, 768, 700);
+      rad.addColorStop(0, "rgba(255, 255, 255, 0.04)");
+      rad.addColorStop(1, "rgba(0, 0, 0, 0.65)");
+      ctx.fillStyle = rad;
+      ctx.fillRect(0, 0, 1024, 1536);
+    }
     safeUpdateCanvasTexture(window.__holo.uniforms.tBackground, bgCvs);
   });
 }
@@ -768,13 +836,26 @@ function syncTextAndBack3D() {
 function syncTo3D() {
   if (!window.__holo || !window.THREE || !window.__holo.uniforms) return;
 
-  // 1. 背景纹理安全更新
+  // 1. 背景纹理安全更新 (单素材容错)
+  let bgCvs;
   if (rawBgImg) {
-    const bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
-    safeUpdateCanvasTexture(window.__holo.uniforms.tBackground, bgCvs);
+    bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
+  } else {
+    bgCvs = document.createElement("canvas");
+    bgCvs.width = 1024;
+    bgCvs.height = 1536;
+    const ctx = bgCvs.getContext("2d");
+    ctx.fillStyle = "#141615";
+    ctx.fillRect(0, 0, 1024, 1536);
+    const rad = ctx.createRadialGradient(512, 768, 50, 512, 768, 700);
+    rad.addColorStop(0, "rgba(255, 255, 255, 0.04)");
+    rad.addColorStop(1, "rgba(0, 0, 0, 0.65)");
+    ctx.fillStyle = rad;
+    ctx.fillRect(0, 0, 1024, 1536);
   }
+  safeUpdateCanvasTexture(window.__holo.uniforms.tBackground, bgCvs);
 
-  // 2. 主体与线稿纹理安全更新
+  // 2. 主体与线稿纹理安全更新 (单素材容错：无主体时设为透明1x1网格，关闭线稿Sobel)
   if (rawSubjectImg) {
     const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
     safeUpdateCanvasTexture(window.__holo.uniforms.tSubject, subjCvs);
@@ -784,21 +865,35 @@ function syncTo3D() {
     } catch (e) {
       console.warn("Lineart sync error:", e);
     }
+    if (window.__holo.uniforms.uHasLine) window.__holo.uniforms.uHasLine.value = 1.0;
+  } else {
+    const emptyCvs = document.createElement("canvas");
+    emptyCvs.width = 1;
+    emptyCvs.height = 1;
+    safeUpdateCanvasTexture(window.__holo.uniforms.tSubject, emptyCvs);
+    safeUpdateCanvasTexture(window.__holo.uniforms.tLine, emptyCvs);
+    if (window.__holo.uniforms.uHasLine) window.__holo.uniforms.uHasLine.value = 0.0;
   }
 
   // 3. 文字边框纹理安全更新
   const textCvs = drawTextCanvas(state);
   safeUpdateCanvasTexture(window.__holo.uniforms.tText, textCvs);
 
-  // 3.5 同步卡面特效至 3D 浮层 (具备真实三维景深视差与辉光调节)
+  // 3.5 同步卡面特效至 3D 浮层 (具备真实三维景深视差与辉光调节，支持破框)
   if (state.cardEffect && state.cardEffect !== "none") {
     const fxCvs = getEffectCanvas(state.cardEffect);
     if (fxCvs) {
       safeUpdateCanvasTexture(window.__holo.uniforms.tEffects, fxCvs);
       if (window.__holo.uniforms.uHasFx) window.__holo.uniforms.uHasFx.value = 1.0;
+      if (typeof window.__holo.updateFxTransform === "function") {
+        window.__holo.updateFxTransform(state.fxScale, state.fxX, state.fxY, state.effectsDepth, true);
+      }
     }
   } else {
     if (window.__holo.uniforms.uHasFx) window.__holo.uniforms.uHasFx.value = 0.0;
+    if (typeof window.__holo.updateFxTransform === "function") {
+      window.__holo.updateFxTransform(state.fxScale, state.fxX, state.fxY, state.effectsDepth, false);
+    }
   }
 
   // 4. 着色器物理参数极速同步
@@ -851,11 +946,29 @@ function showWorkshop() {
 async function buildPureViewerZip() {
   const zip = new JSZip();
 
-  // 1. 生成最新真实 PNG 图层 (已烘焙构图缩放、位移、模糊与卡背款式)
-  const bgCvs = fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur);
-  const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
+  // 1. 生成最新真实 PNG 图层 (单素材容错)
+  const bgCvs = rawBgImg
+    ? fitImageToCanvas(rawBgImg, state.bgScale, state.bgX, state.bgY, false, state.bgBlur)
+    : (() => {
+        const c = document.createElement("canvas");
+        c.width = 1024; c.height = 1536;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#141615"; ctx.fillRect(0, 0, 1024, 1536);
+        return c;
+      })();
+  const subjCvs = rawSubjectImg
+    ? fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0)
+    : (() => {
+        const c = document.createElement("canvas");
+        c.width = 1; c.height = 1;
+        return c;
+      })();
   const textCvs = drawTextCanvas(state);
-  const lineCvs = generateLineart(subjCvs);
+  const lineCvs = rawSubjectImg ? generateLineart(subjCvs) : (() => {
+    const c = document.createElement("canvas");
+    c.width = 1; c.height = 1;
+    return c;
+  })();
   const backCvs = drawBackCanvas(state, rawBgImg, rawSubjectImg);
 
   const getBlob = (cvs) => new Promise((resolve) => cvs.toBlob(resolve, "image/png"));
@@ -875,15 +988,20 @@ async function buildPureViewerZip() {
   assets.file("lineart.png", lineBlob);
   assets.file("back.png", backBlob);
 
-  // 如果启用了卡面特效，导出特效图层 (直接获取源素材，确保无任何绘制或加载遗漏)
+  // 如果启用了卡面特效，导出特效图层 (支持自定义上传与内置特效)
   if (state.cardEffect && state.cardEffect !== "none") {
     try {
-      const effSrc = effectSources[state.cardEffect];
-      if (effSrc) {
-        const fxRes = await fetch(effSrc);
-        if (fxRes.ok) {
-          const fxBuf = await fxRes.arrayBuffer();
-          assets.file("effects.png", fxBuf);
+      if (state.cardEffect === "custom" && customFxImg) {
+        const fxBlob = await imageToBlob(customFxImg);
+        if (fxBlob) assets.file("effects.png", fxBlob);
+      } else {
+        const effSrc = effectSources[state.cardEffect];
+        if (effSrc) {
+          const fxRes = await fetch(effSrc);
+          if (fxRes.ok) {
+            const fxBuf = await fxRes.arrayBuffer();
+            assets.file("effects.png", fxBuf);
+          }
         }
       }
     } catch (effErr) {
@@ -1122,9 +1240,12 @@ async function buildPureViewerZip() {
       subjectDepth: state.depth,
       backgroundDepth: state.bgDepth,
       diff: state.diff ?? 1.0,
-      effectsDepth: 0.14,
+      effectsDepth: state.effectsDepth ?? 0.14,
       foil: state.foil,
-      fxGlow: state.fxGlow ?? 0.5
+      fxGlow: state.fxGlow ?? 0.5,
+      fxScale: state.fxScale ?? 1.0,
+      fxX: state.fxX ?? 0,
+      fxY: state.fxY ?? 0
     },
     safeArea: {
       scale: 1.0,
@@ -1552,6 +1673,13 @@ function bindSidebarInputs(prefix, isPageB = false) {
       state.backStyle = e.target.value;
       const other = $(prefix === "ws" ? "b-back-style" : "ws-back-style");
       if (other) other.value = e.target.value;
+
+      const showBackRename = state.backStyle === "custom" && Boolean(customBackImg || hasCustomBack);
+      ["ws", "b"].forEach((p) => {
+        const rb = $(p + "-back-rename-box");
+        if (rb) rb.style.display = showBackRename ? "flex" : "none";
+      });
+
       if (!isPageB) render2DPreview();
       if (isPageB) syncTextAndBack3D();
     };
@@ -1833,6 +1961,117 @@ function bindSidebarInputs(prefix, isPageB = false) {
       if (isPageB) sync3DUniforms();
     };
   }
+
+  // 7.5 特效破框与构图微调 (缩放、水平X、垂直Y与重置)
+  const fxScale = $(prefix + "-fx-scale");
+  const fxScaleVal = $(prefix + "-val-fx-scale");
+  if (fxScale) {
+    fxScale.value = state.fxScale ?? 1.0;
+    if (fxScaleVal) fxScaleVal.textContent = (state.fxScale ?? 1.0).toFixed(2) + "x";
+    fxScale.oninput = (e) => {
+      state.fxScale = parseFloat(e.target.value);
+      if (fxScaleVal) fxScaleVal.textContent = state.fxScale.toFixed(2) + "x";
+      const other = $(prefix === "ws" ? "b-fx-scale" : "ws-fx-scale");
+      const otherVal = $(prefix === "ws" ? "b-val-fx-scale" : "ws-val-fx-scale");
+      if (other) other.value = state.fxScale;
+      if (otherVal) otherVal.textContent = fxScaleVal.textContent;
+      if (!isPageB) render2DPreview();
+      if (isPageB) sync3DUniforms();
+    };
+  }
+
+  const fxX = $(prefix + "-fx-x");
+  const fxXVal = $(prefix + "-val-fx-x");
+  if (fxX) {
+    fxX.value = state.fxX ?? 0;
+    if (fxXVal) fxXVal.textContent = (state.fxX ?? 0) + "px";
+    fxX.oninput = (e) => {
+      state.fxX = parseInt(e.target.value);
+      if (fxXVal) fxXVal.textContent = state.fxX + "px";
+      const other = $(prefix === "ws" ? "b-fx-x" : "ws-fx-x");
+      const otherVal = $(prefix === "ws" ? "b-val-fx-x" : "ws-val-fx-x");
+      if (other) other.value = state.fxX;
+      if (otherVal) otherVal.textContent = fxXVal.textContent;
+      if (!isPageB) render2DPreview();
+      if (isPageB) sync3DUniforms();
+    };
+  }
+
+  const fxY = $(prefix + "-fx-y");
+  const fxYVal = $(prefix + "-val-fx-y");
+  if (fxY) {
+    fxY.value = state.fxY ?? 0;
+    if (fxYVal) fxYVal.textContent = (state.fxY ?? 0) + "px";
+    fxY.oninput = (e) => {
+      state.fxY = parseInt(e.target.value);
+      if (fxYVal) fxYVal.textContent = state.fxY + "px";
+      const other = $(prefix === "ws" ? "b-fx-y" : "ws-fx-y");
+      const otherVal = $(prefix === "ws" ? "b-val-fx-y" : "ws-val-fx-y");
+      if (other) other.value = state.fxY;
+      if (otherVal) otherVal.textContent = fxYVal.textContent;
+      if (!isPageB) render2DPreview();
+      if (isPageB) sync3DUniforms();
+    };
+  }
+
+  const resetFx = $(prefix + "-reset-fx-pos");
+  if (resetFx) {
+    resetFx.onclick = () => {
+      state.fxScale = 1.0;
+      state.fxX = 0;
+      state.fxY = 0;
+      ["ws", "b"].forEach((p) => {
+        const sc = $(p + "-fx-scale");
+        const scV = $(p + "-val-fx-scale");
+        const x = $(p + "-fx-x");
+        const xV = $(p + "-val-fx-x");
+        const y = $(p + "-fx-y");
+        const yV = $(p + "-val-fx-y");
+        if (sc) sc.value = 1.0;
+        if (scV) scV.textContent = "1.00x";
+        if (x) x.value = 0;
+        if (xV) xV.textContent = "0px";
+        if (y) y.value = 0;
+        if (yV) yV.textContent = "0px";
+      });
+      render2DPreview();
+      if (isPageB) sync3DUniforms();
+    };
+  }
+
+  // 7.6 自定义特效与卡背重命名输入
+  const customFxNameInput = $(prefix + "-custom-fx-name");
+  if (customFxNameInput) {
+    customFxNameInput.value = state.customFxName || "自定义特效";
+    customFxNameInput.oninput = (e) => {
+      state.customFxName = e.target.value.trim() || "自定义特效";
+      const other = $(prefix === "ws" ? "b-custom-fx-name" : "ws-custom-fx-name");
+      if (other) other.value = e.target.value;
+      ["ws", "b"].forEach((p) => {
+        const span = $(p + "-pill-custom-fx-name");
+        if (span) span.textContent = state.customFxName;
+      });
+      if (state.cardEffect === "custom") {
+        document.querySelectorAll(".effect-name-val").forEach((el) => {
+          el.textContent = state.customFxName;
+        });
+      }
+    };
+  }
+
+  const customBackNameInput = $(prefix + "-custom-back-name");
+  if (customBackNameInput) {
+    customBackNameInput.value = state.customBackName || "自定义卡背";
+    customBackNameInput.oninput = (e) => {
+      state.customBackName = e.target.value.trim() || "自定义卡背";
+      const other = $(prefix === "ws" ? "b-custom-back-name" : "ws-custom-back-name");
+      if (other) other.value = e.target.value;
+      ["ws", "b"].forEach((p) => {
+        const opt = $(p + "-opt-custom-back");
+        if (opt) opt.textContent = "★ " + state.customBackName;
+      });
+    };
+  }
 }
 
 
@@ -2108,7 +2347,7 @@ function initDrawerToggles() {
 }
 
 
-// 初始化卡面特效控制器
+// 初始化卡面特效控制器 (支持自定义特效与药丸命名动态高亮)
 function setCardEffect(eff) {
   state.cardEffect = eff || "none";
   document.querySelectorAll("[data-effect]").forEach((b) => {
@@ -2116,9 +2355,32 @@ function setCardEffect(eff) {
     b.classList.toggle("active", isActive);
     b.setAttribute("aria-pressed", String(isActive));
   });
+
+  const displayName = state.cardEffect === "custom"
+    ? (state.customFxName || "★ 自定义特效")
+    : (effectNames[state.cardEffect] || state.cardEffect);
   document.querySelectorAll(".effect-name-val").forEach((el) => {
-    el.textContent = effectNames[state.cardEffect] || state.cardEffect;
+    el.textContent = displayName;
   });
+
+  const hasCustom = Boolean(customFxImg || hasCustomFx);
+  ["ws", "b"].forEach((p) => {
+    const pill = $(p + "-pill-custom-fx");
+    const renameBox = $(p + "-fx-rename-box");
+    const nameSpan = $(p + "-pill-custom-fx-name");
+    const nameInput = $(p + "-custom-fx-name");
+    if (pill) {
+      pill.style.display = hasCustom ? "inline-flex" : "none";
+      if (nameSpan) nameSpan.textContent = state.customFxName || "自定义";
+    }
+    if (renameBox) {
+      renameBox.style.display = (hasCustom && state.cardEffect === "custom") ? "flex" : "none";
+    }
+    if (nameInput) {
+      nameInput.value = state.customFxName || "自定义特效";
+    }
+  });
+
   render2DPreview();
   syncTo3D();
 }
@@ -2338,9 +2600,11 @@ async function exportSingleCard(id) {
   try {
     const card = await dbGetCard(id);
     if (!card) return;
-    const [subjUrl, bgUrl] = await Promise.all([
+    const [subjUrl, bgUrl, fxUrl, backUrl] = await Promise.all([
       blobToDataUrl(card.subjectBlob),
-      blobToDataUrl(card.bgBlob)
+      blobToDataUrl(card.bgBlob),
+      blobToDataUrl(card.fxBlob),
+      blobToDataUrl(card.backBlob)
     ]);
     const exportData = {
       version: "1.0",
@@ -2350,8 +2614,12 @@ async function exportSingleCard(id) {
         ...card,
         subjectBlob: null,
         bgBlob: null,
+        fxBlob: null,
+        backBlob: null,
         subjectDataUrl: subjUrl,
-        bgDataUrl: bgUrl
+        bgDataUrl: bgUrl,
+        fxDataUrl: fxUrl,
+        backDataUrl: backUrl
       }
     };
     const cName = card.name || card.title || "card";
@@ -2373,16 +2641,22 @@ async function exportAllCards() {
     showToast("正在打包导出 " + cards.length + " 张卡牌...");
     const exportedCards = await Promise.all(
       cards.map(async (card) => {
-        const [subjUrl, bgUrl] = await Promise.all([
+        const [subjUrl, bgUrl, fxUrl, backUrl] = await Promise.all([
           blobToDataUrl(card.subjectBlob),
-          blobToDataUrl(card.bgBlob)
+          blobToDataUrl(card.bgBlob),
+          blobToDataUrl(card.fxBlob),
+          blobToDataUrl(card.backBlob)
         ]);
         return {
           ...card,
           subjectBlob: null,
           bgBlob: null,
+          fxBlob: null,
+          backBlob: null,
           subjectDataUrl: subjUrl,
-          bgDataUrl: bgUrl
+          bgDataUrl: bgUrl,
+          fxDataUrl: fxUrl,
+          backDataUrl: backUrl
         };
       })
     );
@@ -2427,9 +2701,11 @@ async function importCardsFromFile(file) {
     showToast("正在导入 " + incomingCards.length + " 张卡牌...");
 
     for (const raw of incomingCards) {
-      const [subjBlob, bgBlob] = await Promise.all([
+      const [subjBlob, bgBlob, fxBlob, backBlob] = await Promise.all([
         raw.subjectDataUrl ? dataUrlToBlob(raw.subjectDataUrl) : Promise.resolve(raw.subjectBlob || null),
-        raw.bgDataUrl ? dataUrlToBlob(raw.bgDataUrl) : Promise.resolve(raw.bgBlob || null)
+        raw.bgDataUrl ? dataUrlToBlob(raw.bgDataUrl) : Promise.resolve(raw.bgBlob || null),
+        raw.fxDataUrl ? dataUrlToBlob(raw.fxDataUrl) : Promise.resolve(raw.fxBlob || null),
+        raw.backDataUrl ? dataUrlToBlob(raw.backDataUrl) : Promise.resolve(raw.backBlob || null)
       ]);
 
       const isSubjCustom = raw.isCustomSubject !== undefined ? raw.isCustomSubject : (raw.subjectDataUrl ? true : !isDefaultSubjectBlob(subjBlob));
@@ -2442,10 +2718,16 @@ async function importCardsFromFile(file) {
         title: raw.title || raw.name || "导入卡牌",
         subjectBlob: subjBlob,
         bgBlob: bgBlob,
+        fxBlob: fxBlob,
+        backBlob: backBlob,
         isCustomSubject: isSubjCustom,
         isCustomBg: isBgCustom,
+        isCustomFx: Boolean(fxBlob),
+        isCustomBack: Boolean(backBlob),
         subjectDataUrl: undefined,
         bgDataUrl: undefined,
+        fxDataUrl: undefined,
+        backDataUrl: undefined,
         createdAt: raw.createdAt || Date.now()
       };
 
@@ -3016,7 +3298,54 @@ function syncAllInputsFromState() {
     setTxt("val-fx-glow", Math.round((state.fxGlow ?? 0.5) * 100) + "%");
     setVal("fx-depth", state.effectsDepth ?? 0.14);
     setTxt("val-fx-depth", (state.effectsDepth ?? 0.14).toFixed(2));
+
+    setVal("fx-scale", state.fxScale ?? 1.0);
+    setTxt("val-fx-scale", (state.fxScale ?? 1.0).toFixed(2) + "x");
+    setVal("fx-x", state.fxX ?? 0);
+    setTxt("val-fx-x", (state.fxX ?? 0) + "px");
+    setVal("fx-y", state.fxY ?? 0);
+    setTxt("val-fx-y", (state.fxY ?? 0) + "px");
+
+    setVal("custom-fx-name", state.customFxName || "自定义特效");
+    setVal("custom-back-name", state.customBackName || "自定义卡背");
+
+    const opt = $(p + "-opt-custom-back");
+    if (opt) {
+      opt.style.display = (hasCustomBack || customBackImg) ? "block" : "none";
+      opt.textContent = "★ " + (state.customBackName || "自定义卡背");
+    }
+
+    const pill = $(p + "-pill-custom-fx");
+    if (pill) {
+      pill.style.display = (hasCustomFx || customFxImg) ? "inline-flex" : "none";
+      const nameSpan = $(p + "-pill-custom-fx-name");
+      if (nameSpan) nameSpan.textContent = state.customFxName || "自定义";
+    }
+
+    const fxRb = $(p + "-fx-rename-box");
+    if (fxRb) fxRb.style.display = (hasCustomFx || customFxImg) && state.cardEffect === "custom" ? "flex" : "none";
+
+    const bkRb = $(p + "-back-rename-box");
+    if (bkRb) bkRb.style.display = (hasCustomBack || customBackImg) && state.backStyle === "custom" ? "flex" : "none";
   });
+
+  const statusSubj = $("ws-status-subject");
+  const delSubj = $("ws-del-subject");
+  if (statusSubj) {
+    statusSubj.textContent = rawSubjectImg ? "已就绪 (可移除)" : "未添加 (已清空)";
+  }
+  if (delSubj) {
+    delSubj.classList.toggle("is-cleared", !rawSubjectImg);
+  }
+
+  const statusBg = $("ws-status-bg");
+  const delBg = $("ws-del-bg");
+  if (statusBg) {
+    statusBg.textContent = rawBgImg ? "已就绪 (可移除)" : "未添加 (已清空)";
+  }
+  if (delBg) {
+    delBg.classList.toggle("is-cleared", !rawBgImg);
+  }
 
   const f = state.finish || "pearl";
   document.querySelectorAll("[data-finish]").forEach((b) => {
@@ -3076,6 +3405,11 @@ async function loadCardFromDeck(id, silent = false) {
     state.foil = card.foil ?? state.foil;
     state.fxGlow = card.fxGlow ?? state.fxGlow ?? 0.5;
     state.effectsDepth = card.effectsDepth ?? state.effectsDepth ?? 0.14;
+    state.fxScale = card.fxScale ?? state.fxScale ?? 1.0;
+    state.fxX = card.fxX ?? state.fxX ?? 0;
+    state.fxY = card.fxY ?? state.fxY ?? 0;
+    state.customFxName = card.customFxName ?? state.customFxName ?? "自定义特效";
+    state.customBackName = card.customBackName ?? state.customBackName ?? "自定义卡背";
 
     // 2. 恢复图像并标记来源属性
     if (card.subjectBlob) {
@@ -3101,6 +3435,28 @@ async function loadCardFromDeck(id, silent = false) {
       }
     } else {
       hasCustomBg = false;
+    }
+
+    if (card.fxBlob) {
+      const fImg = await blobToImage(card.fxBlob);
+      if (fImg) {
+        customFxImg = fImg;
+        hasCustomFx = true;
+      }
+    } else {
+      customFxImg = null;
+      hasCustomFx = false;
+    }
+
+    if (card.backBlob) {
+      const kImg = await blobToImage(card.backBlob);
+      if (kImg) {
+        customBackImg = kImg;
+        hasCustomBack = true;
+      }
+    } else {
+      customBackImg = null;
+      hasCustomBack = false;
     }
 
     // 3. 刷新控件与渲染
@@ -3198,7 +3554,13 @@ async function handleSaveCurrentChanges() {
       bgDepth: state.bgDepth,
       diff: state.diff ?? 1.0,
       foil: state.foil,
-      fxGlow: state.fxGlow ?? 0.5
+      fxGlow: state.fxGlow ?? 0.5,
+      effectsDepth: state.effectsDepth ?? 0.14,
+      fxScale: state.fxScale ?? 1.0,
+      fxX: state.fxX ?? 0,
+      fxY: state.fxY ?? 0,
+      customFxName: state.customFxName || "自定义特效",
+      customBackName: state.customBackName || "自定义卡背"
     };
 
     // 1. 存入 localStorage 设为后续进站的默认配置
@@ -3226,13 +3588,33 @@ async function handleSaveCurrentChanges() {
           if (previewCanvas) {
             targetCard.thumbDataUrl = previewCanvas.toDataURL("image/jpeg", 0.75);
           }
-          if (hasCustomSubject && rawSubjectImg) {
+          if (rawSubjectImg) {
             targetCard.subjectBlob = await imageToBlob(rawSubjectImg);
-            targetCard.isCustomSubject = true;
+            targetCard.isCustomSubject = hasCustomSubject;
+          } else {
+            delete targetCard.subjectBlob;
+            targetCard.isCustomSubject = false;
           }
-          if (hasCustomBg && rawBgImg) {
+          if (rawBgImg) {
             targetCard.bgBlob = await imageToBlob(rawBgImg);
-            targetCard.isCustomBg = true;
+            targetCard.isCustomBg = hasCustomBg;
+          } else {
+            delete targetCard.bgBlob;
+            targetCard.isCustomBg = false;
+          }
+          if (customFxImg && hasCustomFx) {
+            targetCard.fxBlob = await imageToBlob(customFxImg);
+            targetCard.isCustomFx = true;
+          } else {
+            delete targetCard.fxBlob;
+            targetCard.isCustomFx = false;
+          }
+          if (customBackImg && hasCustomBack) {
+            targetCard.backBlob = await imageToBlob(customBackImg);
+            targetCard.isCustomBack = true;
+          } else {
+            delete targetCard.backBlob;
+            targetCard.isCustomBack = false;
           }
           await dbSaveCard(targetCard);
         }
@@ -3313,6 +3695,11 @@ async function initApp() {
         if (p.foil !== undefined) state.foil = p.foil;
         if (p.fxGlow !== undefined) state.fxGlow = p.fxGlow;
         if (p.effectsDepth !== undefined) state.effectsDepth = p.effectsDepth;
+        if (p.fxScale !== undefined) state.fxScale = p.fxScale;
+        if (p.fxX !== undefined) state.fxX = p.fxX;
+        if (p.fxY !== undefined) state.fxY = p.fxY;
+        if (p.customFxName !== undefined) state.customFxName = p.customFxName;
+        if (p.customBackName !== undefined) state.customBackName = p.customBackName;
       }
       applyFinishUI(state.finish);
       setCardEffect(state.cardEffect);
@@ -3386,8 +3773,9 @@ async function initApp() {
   setTimeout(hideWorkshopLoading, 4000); // 弱网安全兜底保证遮罩不卡死
   checkAutoNotice(); // 用户初次进入自动弹出公告栏
 
-  // A 页面上传主体
+  // A 页面上传与删除主体素材
   const uploadSubj = $("ws-upload-subject");
+  const delSubj = $("ws-del-subject");
   if (uploadSubj) {
     uploadSubj.onchange = (e) => {
       const file = e.target.files?.[0];
@@ -3401,16 +3789,33 @@ async function initApp() {
           img._isCustom = true;
           img._isDefault = false;
           rawSubjectImg = img;
+          const statusEl = $("ws-status-subject");
+          if (statusEl) statusEl.textContent = "已就绪 (可移除)";
+          if (delSubj) delSubj.classList.remove("is-cleared");
           render2DPreview();
           syncTo3D();
+          showToast("已成功载入主体素材！");
         };
       };
       reader.readAsDataURL(file);
     };
   }
+  if (delSubj) {
+    delSubj.onclick = () => {
+      rawSubjectImg = null;
+      hasCustomSubject = false;
+      const statusEl = $("ws-status-subject");
+      if (statusEl) statusEl.textContent = "未添加 (已清空)";
+      delSubj.classList.add("is-cleared");
+      render2DPreview();
+      syncTo3D();
+      showToast("已移除人物主体，当前将以纯背景模式生成卡牌");
+    };
+  }
 
-  // A 页面上传背景
+  // A 页面上传与删除背景素材
   const uploadBg = $("ws-upload-bg");
+  const delBg = $("ws-del-bg");
   if (uploadBg) {
     uploadBg.onchange = (e) => {
       const file = e.target.files?.[0];
@@ -3424,13 +3829,117 @@ async function initApp() {
           img._isCustom = true;
           img._isDefault = false;
           rawBgImg = img;
+          const statusEl = $("ws-status-bg");
+          if (statusEl) statusEl.textContent = "已就绪 (可移除)";
+          if (delBg) delBg.classList.remove("is-cleared");
           render2DPreview();
           syncTo3D();
+          showToast("已成功载入背景插画！");
         };
       };
       reader.readAsDataURL(file);
     };
   }
+  if (delBg) {
+    delBg.onclick = () => {
+      rawBgImg = null;
+      hasCustomBg = false;
+      const statusEl = $("ws-status-bg");
+      if (statusEl) statusEl.textContent = "未添加 (已清空)";
+      delBg.classList.add("is-cleared");
+      render2DPreview();
+      syncTo3D();
+      showToast("已移除背景素材");
+    };
+  }
+
+  // 侧边栏卡面特效与卡背贴图上传及清空 (Page A 与 Page B 双向完全同步)
+  ["ws", "b"].forEach((prefix) => {
+    const uploadFx = $(prefix + "-upload-fx");
+    if (uploadFx) {
+      uploadFx.onchange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.src = evt.target.result;
+          img.onload = () => {
+            customFxImg = img;
+            hasCustomFx = true;
+            state.cardEffect = "custom";
+            setCardEffect("custom");
+            showToast("✨ 已载入自定义全息特效贴图！");
+          };
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+
+    const delFx = $(prefix + "-del-fx");
+    if (delFx) {
+      delFx.onclick = () => {
+        customFxImg = null;
+        hasCustomFx = false;
+        state.cardEffect = "none";
+        setCardEffect("none");
+        showToast("已清空自定义特效");
+      };
+    }
+
+    const uploadBack = $(prefix + "-upload-back");
+    if (uploadBack) {
+      uploadBack.onchange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.src = evt.target.result;
+          img.onload = () => {
+            customBackImg = img;
+            hasCustomBack = true;
+            state.backStyle = "custom";
+            ["ws", "b"].forEach((p) => {
+              const opt = $(p + "-opt-custom-back");
+              if (opt) {
+                opt.style.display = "block";
+                opt.textContent = "★ " + (state.customBackName || "自定义卡背");
+              }
+              const sel = $(p + "-back-style");
+              if (sel) sel.value = "custom";
+              const rb = $(p + "-back-rename-box");
+              if (rb) rb.style.display = "flex";
+            });
+            render2DPreview();
+            syncTo3D();
+            showToast("✨ 已载入自定义卡背贴图！");
+          };
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+
+    const delBack = $(prefix + "-del-back");
+    if (delBack) {
+      delBack.onclick = () => {
+        customBackImg = null;
+        hasCustomBack = false;
+        state.backStyle = "ambient";
+        ["ws", "b"].forEach((p) => {
+          const opt = $(p + "-opt-custom-back");
+          if (opt) opt.style.display = "none";
+          const sel = $(p + "-back-style");
+          if (sel) sel.value = "ambient";
+          const rb = $(p + "-back-rename-box");
+          if (rb) rb.style.display = "none";
+        });
+        render2DPreview();
+        syncTo3D();
+        showToast("已恢复默认算法卡背");
+      };
+    }
+  });
 
   // 绑定 Page A 与 Page B 的侧边栏组件
   bindSidebarInputs("ws", false);
