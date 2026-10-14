@@ -782,14 +782,6 @@ function sync3DUniforms() {
       state.cardEffect && state.cardEffect !== "none"
     );
   }
-  if (typeof window.__holo.updateBgTransform === "function") {
-    window.__holo.updateBgTransform(
-      state.bgScale ?? 1.0,
-      state.bgX ?? 0,
-      state.bgY ?? 0,
-      state.bgDepth ?? -0.60
-    );
-  }
 }
 
 // 动态刷新作品信息弹窗内容 (与当前卡牌标题、出处与编号实时同步)
@@ -876,13 +868,6 @@ function syncBackground3D() {
       const blurCvs = createBlurBackdropCanvas(rawBgImg);
       safeUpdateCanvasTexture(window.__holo.uniforms.tBackgroundBlur, blurCvs);
     }
-    if (typeof window.__holo.updateBgTransform === "function") {
-      window.__holo.updateBgTransform(state.bgScale, state.bgX, state.bgY, state.bgDepth);
-    }
-    if (window.__holo.bgMesh && window.__holo.uniforms.tBackground) {
-      window.__holo.bgMesh.material.map = window.__holo.uniforms.tBackground.value;
-      window.__holo.bgMesh.material.needsUpdate = true;
-    }
   });
 }
 
@@ -928,14 +913,6 @@ function syncTo3D() {
     const blurCvs = createBlurBackdropCanvas(rawBgImg);
     safeUpdateCanvasTexture(window.__holo.uniforms.tBackgroundBlur, blurCvs);
   }
-  if (typeof window.__holo.updateBgTransform === "function") {
-    window.__holo.updateBgTransform(state.bgScale, state.bgX, state.bgY, state.bgDepth);
-  }
-  if (window.__holo.bgMesh && window.__holo.uniforms.tBackground) {
-    window.__holo.bgMesh.material.map = window.__holo.uniforms.tBackground.value;
-    window.__holo.bgMesh.material.needsUpdate = true;
-  }
-
   // 2. 主体与线稿纹理安全更新 (单素材容错：无主体时设为透明1x1网格，关闭线稿Sobel)
   if (rawSubjectImg) {
     const subjCvs = fitImageToCanvas(rawSubjectImg, state.subjectScale, state.subjectX, state.subjectY, true, 0);
