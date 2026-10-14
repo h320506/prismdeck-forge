@@ -9,8 +9,8 @@ function $(id) {
   return document.getElementById(id);
 }
 
-// 全局卡牌统一状态
-const state = {
+// 官方标准默认基准配置 (用于新卡牌与缺失字段纯净回退，杜绝卡牌间跨卡污染)
+const DEFAULTS = {
   title: "洛琪希",
   subtitle: "无职转生～到了异世界",
   collection: "水王级",
@@ -41,6 +41,9 @@ const state = {
   fxGlow: 0.20,
   effectsDepth: 0.14
 };
+
+// 全局卡牌统一状态
+const state = { ...DEFAULTS };
 
 let rawSubjectImg = null;
 let rawBgImg = null;
@@ -3377,49 +3380,60 @@ async function saveCurrentCardToDeck(triggerBtn) {
       thumbDataUrl = tc.toDataURL("image/jpeg", 0.85);
     }
 
-    // 2. 将主体与背景图转为 Blob 永久保留
-    const [subjBlob, bgBlob] = await Promise.all([
-      imageToBlob(rawSubjectImg),
-      imageToBlob(rawBgImg)
+    // 2. 将4大素材全部转为无损 Blob 永久保留在牌库中
+    const [subjBlob, bgBlob, fxBlob, backBlob] = await Promise.all([
+      rawSubjectImg ? imageToBlob(rawSubjectImg) : Promise.resolve(null),
+      rawBgImg ? imageToBlob(rawBgImg) : Promise.resolve(null),
+      (customFxImg && (state.cardEffect.startsWith("custom") || hasCustomFx)) ? imageToBlob(customFxImg) : Promise.resolve(null),
+      (customBackImg && (state.backStyle.startsWith("custom") || hasCustomBack)) ? imageToBlob(customBackImg) : Promise.resolve(null)
     ]);
 
-    // 3. 构建卡牌数据体 (完整持久化保存材质、特效及素材来源标识)
+    // 3. 构建卡牌数据体 (完整持久化保存材质、特效、卡背及全套独立参数)
     const cardId = "card_" + Date.now();
-    const isSubjCustom = Boolean(hasCustomSubject);
-    const isBgCustom = Boolean(hasCustomBg);
     const cardData = {
       id: cardId,
       createdAt: Date.now(),
-      name: state.title || "未命名卡牌",
-      title: state.title || "未命名卡牌",
+      name: state.title || DEFAULTS.title,
+      title: state.title || DEFAULTS.title,
       subtitle: state.subtitle || "",
-      collection: state.collection || "文学部",
+      collection: state.collection || DEFAULTS.collection,
       technique: state.technique || "",
       tagline: state.tagline || "",
       edition: state.edition || "001 / 001",
-      borderStyle: state.borderStyle || "classic-gold",
-      colorTheme: state.colorTheme || "gold",
-      backStyle: state.backStyle || "ambient",
-      finish: state.finish,
-      cardEffect: state.cardEffect,
-      subjectScale: state.subjectScale,
-      subjectX: state.subjectX,
-      subjectY: state.subjectY,
-      bgScale: state.bgScale,
-      bgX: state.bgX,
-      bgY: state.bgY,
-      bgBlur: state.bgBlur,
-      depth: state.depth,
-      bgDepth: state.bgDepth,
-      diff: state.diff ?? 1.0,
-      foil: state.foil,
-      fxGlow: state.fxGlow ?? 0.5,
-      effectsDepth: state.effectsDepth ?? 0.14,
+      borderStyle: state.borderStyle || DEFAULTS.borderStyle,
+      colorTheme: state.colorTheme || DEFAULTS.colorTheme,
+      backStyle: state.backStyle || DEFAULTS.backStyle,
+      finish: state.finish || DEFAULTS.finish,
+      cardEffect: state.cardEffect || DEFAULTS.cardEffect,
+      customFxName: state.customFxName || DEFAULTS.customFxName,
+      customBackName: state.customBackName || DEFAULTS.customBackName,
+      subjectScale: state.subjectScale ?? DEFAULTS.subjectScale,
+      subjectX: state.subjectX ?? DEFAULTS.subjectX,
+      subjectY: state.subjectY ?? DEFAULTS.subjectY,
+      bgScale: state.bgScale ?? DEFAULTS.bgScale,
+      bgX: state.bgX ?? DEFAULTS.bgX,
+      bgY: state.bgY ?? DEFAULTS.bgY,
+      bgBlur: state.bgBlur ?? DEFAULTS.bgBlur,
+      depth: state.depth ?? DEFAULTS.depth,
+      bgDepth: state.bgDepth ?? DEFAULTS.bgDepth,
+      diff: state.diff ?? DEFAULTS.diff,
+      foil: state.foil ?? DEFAULTS.foil,
+      fxGlow: state.fxGlow ?? DEFAULTS.fxGlow,
+      effectsDepth: state.effectsDepth ?? DEFAULTS.effectsDepth,
+      fxScale: state.fxScale ?? DEFAULTS.fxScale,
+      fxX: state.fxX ?? DEFAULTS.fxX,
+      fxY: state.fxY ?? DEFAULTS.fxY,
+      activeCustomFxId: state.activeCustomFxId || null,
+      activeCustomBackId: state.activeCustomBackId || null,
       thumbDataUrl,
       subjectBlob: subjBlob,
       bgBlob: bgBlob,
-      isCustomSubject: isSubjCustom,
-      isCustomBg: isBgCustom
+      fxBlob: fxBlob,
+      backBlob: backBlob,
+      isCustomSubject: Boolean(rawSubjectImg),
+      isCustomBg: Boolean(rawBgImg),
+      isCustomFx: Boolean(fxBlob),
+      isCustomBack: Boolean(backBlob)
     };
 
     await dbSaveCard(cardData);
@@ -3826,66 +3840,73 @@ async function loadCardFromDeck(id, silent = false) {
     if (!card) return;
     activeCardId = id;
 
-    // 1. 恢复全局 state (支持自定义卡牌名称)
-    state.title = card.name || card.title || state.title;
-    state.subtitle = card.subtitle ?? state.subtitle;
-    state.collection = card.collection ?? state.collection;
-    state.technique = card.technique ?? state.technique;
-    state.tagline = card.tagline ?? state.tagline;
-    state.edition = card.edition ?? state.edition;
-    state.borderStyle = card.borderStyle ?? state.borderStyle;
-    state.colorTheme = card.colorTheme ?? state.colorTheme;
-    state.backStyle = card.backStyle ?? "ambient";
-    state.finish = card.finish ?? state.finish;
-    state.cardEffect = card.cardEffect ?? "none";
-    applyFinishUI(state.finish);
-    setCardEffect(state.cardEffect);
+    // 1. 彻底清空上一张卡牌的状态与图像引用，确保各卡牌设置 100% 独立隔离
+    rawSubjectImg = null;
+    hasCustomSubject = false;
+    rawBgImg = null;
+    hasCustomBg = false;
+    customFxImg = null;
+    hasCustomFx = false;
+    customBackImg = null;
+    hasCustomBack = false;
 
-    state.subjectScale = card.subjectScale ?? state.subjectScale;
-    state.subjectX = card.subjectX ?? state.subjectX;
-    state.subjectY = card.subjectY ?? state.subjectY;
+    // 2. 提取配置（兼容扁平字段与 parameters/appearance 嵌套结构），缺失属性严谨回退至官方默认，绝不残留上一张卡的设置
+    const p = card.parameters || {};
+    const app = card.appearance || {};
 
-    state.bgScale = card.bgScale ?? state.bgScale;
-    state.bgX = card.bgX ?? state.bgX;
-    state.bgY = card.bgY ?? state.bgY;
-    state.bgBlur = card.bgBlur ?? state.bgBlur;
+    state.title = card.name || card.title || DEFAULTS.title;
+    state.subtitle = card.subtitle ?? DEFAULTS.subtitle;
+    state.collection = card.collection ?? DEFAULTS.collection;
+    state.technique = card.technique ?? DEFAULTS.technique;
+    state.tagline = card.tagline ?? DEFAULTS.tagline;
+    state.edition = card.edition ?? DEFAULTS.edition;
 
-    state.depth = card.depth ?? state.depth;
-    state.bgDepth = card.bgDepth ?? state.bgDepth;
-    state.diff = card.diff ?? state.diff ?? 1.0;
-    state.foil = card.foil ?? state.foil;
-    state.fxGlow = card.fxGlow ?? state.fxGlow ?? 0.5;
-    state.effectsDepth = card.effectsDepth ?? state.effectsDepth ?? 0.14;
-    state.fxScale = card.fxScale ?? state.fxScale ?? 1.0;
-    state.fxX = card.fxX ?? state.fxX ?? 0;
-    state.fxY = card.fxY ?? state.fxY ?? 0;
-    state.customFxName = card.customFxName ?? state.customFxName ?? "自定义特效";
-    state.customBackName = card.customBackName ?? state.customBackName ?? "自定义卡背";
+    state.borderStyle = card.borderStyle ?? app.borderStyle ?? DEFAULTS.borderStyle;
+    state.colorTheme = card.colorTheme ?? app.colorTheme ?? DEFAULTS.colorTheme;
+    state.finish = card.finish ?? app.finish ?? DEFAULTS.finish;
+    state.cardEffect = card.cardEffect ?? app.cardEffect ?? DEFAULTS.cardEffect;
+    state.backStyle = card.backStyle ?? app.backStyle ?? DEFAULTS.backStyle;
 
-    // 2. 恢复图像并标记来源属性
+    state.subjectScale = card.subjectScale ?? p.subjectScale ?? DEFAULTS.subjectScale;
+    state.subjectX = card.subjectX ?? p.subjectX ?? DEFAULTS.subjectX;
+    state.subjectY = card.subjectY ?? p.subjectY ?? DEFAULTS.subjectY;
+
+    state.bgScale = card.bgScale ?? p.bgScale ?? DEFAULTS.bgScale;
+    state.bgX = card.bgX ?? p.bgX ?? DEFAULTS.bgX;
+    state.bgY = card.bgY ?? p.bgY ?? DEFAULTS.bgY;
+    state.bgBlur = card.bgBlur ?? p.bgBlur ?? DEFAULTS.bgBlur;
+
+    state.depth = card.depth ?? p.subjectDepth ?? DEFAULTS.depth;
+    state.bgDepth = card.bgDepth ?? p.backgroundDepth ?? DEFAULTS.bgDepth;
+    state.diff = card.diff ?? p.diff ?? DEFAULTS.diff;
+    state.foil = card.foil ?? p.foil ?? DEFAULTS.foil;
+    state.fxGlow = card.fxGlow ?? p.fxGlow ?? DEFAULTS.fxGlow;
+    state.effectsDepth = card.effectsDepth ?? p.effectsDepth ?? DEFAULTS.effectsDepth;
+    state.fxScale = card.fxScale ?? p.fxScale ?? DEFAULTS.fxScale;
+    state.fxX = card.fxX ?? p.fxX ?? DEFAULTS.fxX;
+    state.fxY = card.fxY ?? p.fxY ?? DEFAULTS.fxY;
+    state.customFxName = card.customFxName ?? p.customFxName ?? DEFAULTS.customFxName;
+    state.customBackName = card.customBackName ?? p.customBackName ?? DEFAULTS.customBackName;
+
+    // 3. 恢复卡牌专属素材 (若无则保持为 null，杜绝串图)
     if (card.subjectBlob) {
       const sImg = await blobToImage(card.subjectBlob);
       if (sImg) {
-        const isCust = card.isCustomSubject !== undefined ? card.isCustomSubject : !isDefaultSubjectBlob(card.subjectBlob);
-        hasCustomSubject = Boolean(isCust);
-        sImg._isCustom = isCust;
-        sImg._isDefault = !isCust;
+        hasCustomSubject = card.isCustomSubject !== undefined ? card.isCustomSubject : !isDefaultSubjectBlob(card.subjectBlob);
+        sImg._isCustom = hasCustomSubject;
+        sImg._isDefault = !hasCustomSubject;
         rawSubjectImg = sImg;
       }
-    } else {
-      hasCustomSubject = false;
     }
+
     if (card.bgBlob) {
       const bImg = await blobToImage(card.bgBlob);
       if (bImg) {
-        const isCust = card.isCustomBg !== undefined ? card.isCustomBg : !isDefaultBgBlob(card.bgBlob);
-        hasCustomBg = Boolean(isCust);
-        bImg._isCustom = isCust;
-        bImg._isDefault = !isCust;
+        hasCustomBg = card.isCustomBg !== undefined ? card.isCustomBg : !isDefaultBgBlob(card.bgBlob);
+        bImg._isCustom = hasCustomBg;
+        bImg._isDefault = !hasCustomBg;
         rawBgImg = bImg;
       }
-    } else {
-      hasCustomBg = false;
     }
 
     if (card.backBlob) {
@@ -3904,9 +3925,6 @@ async function loadCardFromDeck(id, silent = false) {
           await dbSaveCustomBack({ id: bItem.id, name: bItem.name, dataUrl: bItem.dataUrl, createdAt: bItem.createdAt });
         }
       }
-    } else {
-      customBackImg = null;
-      hasCustomBack = false;
     }
 
     if (card.fxBlob) {
@@ -3925,12 +3943,11 @@ async function loadCardFromDeck(id, silent = false) {
           await dbSaveCustomFx({ id: fItem.id, name: fItem.name, dataUrl: fItem.dataUrl, createdAt: fItem.createdAt });
         }
       }
-    } else {
-      customFxImg = null;
-      hasCustomFx = false;
     }
 
-    // 3. 刷新自制素材库、控件与3D渲染
+    // 4. 刷新自制库、材质界面、侧边栏全控件与2D/3D渲染
+    applyFinishUI(state.finish);
+    setCardEffect(state.cardEffect);
     renderCustomFxPills();
     renderCustomBackOptions();
     syncAllInputsFromState();
@@ -4046,12 +4063,10 @@ async function handleSaveCurrentChanges() {
       body: JSON.stringify(currentSettings)
     }).catch(() => {});
 
-    // 2. 如果牌库中已有卡牌或当前有载入的卡牌，同步更新它
+    // 2. 仅当当前正在编辑牌库中的某张指定卡牌时，更新该特定卡牌，坚决杜绝误伤或串改其他卡牌
     try {
-      const cards = await dbGetAllCards();
-      if (cards && cards.length > 0) {
-        cards.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        const targetCard = (activeCardId ? cards.find(c => c.id === activeCardId) : null) || cards[0];
+      if (activeCardId) {
+        const targetCard = await dbGetCard(activeCardId);
         if (targetCard) {
           Object.assign(targetCard, currentSettings);
           targetCard.name = state.title || targetCard.name;
@@ -4075,14 +4090,14 @@ async function handleSaveCurrentChanges() {
             delete targetCard.bgBlob;
             targetCard.isCustomBg = false;
           }
-          if (customFxImg && hasCustomFx) {
+          if (customFxImg && (state.cardEffect.startsWith("custom") || hasCustomFx)) {
             targetCard.fxBlob = await imageToBlob(customFxImg);
             targetCard.isCustomFx = true;
           } else {
             delete targetCard.fxBlob;
             targetCard.isCustomFx = false;
           }
-          if (customBackImg && hasCustomBack) {
+          if (customBackImg && (state.backStyle.startsWith("custom") || hasCustomBack)) {
             targetCard.backBlob = await imageToBlob(customBackImg);
             targetCard.isCustomBack = true;
           } else {
