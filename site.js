@@ -11,34 +11,34 @@ function $(id) {
 
 // 全局卡牌统一状态
 const state = {
-  title: "八奈见杏菜",
-  subtitle: "败犬女主太多了！",
-  collection: "文学部",
-  technique: "温水くん",
-  tagline: "あはは、温水くん。",
+  title: "洛琪希",
+  subtitle: "无职转生～到了异世界",
+  collection: "水王级",
+  technique: "无吟唱水魔法",
+  tagline: "鲁迪～",
   edition: "001 / 001",
   finish: "pearl",
-  cardEffect: "none",
+  cardEffect: "star_glint",
   customFxName: "自定义特效",
   fxScale: 1.0,
   fxX: 0,
   fxY: 0,
-  borderStyle: "classic-gold",
-  colorTheme: "gold",
+  borderStyle: "ornamental",
+  colorTheme: "cyan",
   backStyle: "ambient",
   customBackName: "自定义卡背",
-  subjectScale: 1.0,
+  subjectScale: 0.74,
   subjectX: 0,
   subjectY: 0,
   bgScale: 1.0,
   bgX: 0,
   bgY: 0,
-  bgBlur: 0,
-  depth: 0.32,
-  bgDepth: -0.18,
-  diff: 1.0,
-  foil: 0.52,
-  fxGlow: 0.5,
+  bgBlur: 5,
+  depth: 0.35,
+  bgDepth: -0.60,
+  diff: 2.55,
+  foil: 0.50,
+  fxGlow: 0.20,
   effectsDepth: 0.14
 };
 
@@ -2520,6 +2520,23 @@ function blobToDataUrl(blob) {
   });
 }
 
+function imageToDataUrl(img) {
+  if (!img) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    try {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth || img.width || 1024;
+      c.height = img.naturalHeight || img.height || 1536;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      resolve(c.toDataURL("image/png"));
+    } catch (e) {
+      console.warn("imageToDataUrl error:", e);
+      resolve(null);
+    }
+  });
+}
+
 function dataUrlToBlob(dataUrl) {
   if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) {
     return Promise.resolve(null);
@@ -2568,13 +2585,25 @@ async function exportCurrentCardJson(triggerBtn) {
       thumbDataUrl = tc.toDataURL("image/jpeg", 0.85);
     }
 
-    const [subjBlob, bgBlob] = await Promise.all([
-      imageToBlob(rawSubjectImg),
-      imageToBlob(rawBgImg)
+    const activeCustomFx = customFxLibrary.find(x => x.id === state.activeCustomFxId);
+    const fxImgToExport = activeCustomFx?.img || customFxImg;
+    const isFxCustom = state.cardEffect?.startsWith("custom") || hasCustomFx;
+
+    const activeCustomBack = customBackLibrary.find(x => x.id === state.activeCustomBackId);
+    const backImgToExport = activeCustomBack?.img || customBackImg;
+    const isBackCustom = state.backStyle?.startsWith("custom") || hasCustomBack;
+
+    const [subjBlob, bgBlob, fxBlob, backBlob] = await Promise.all([
+      rawSubjectImg ? imageToBlob(rawSubjectImg) : Promise.resolve(null),
+      rawBgImg ? imageToBlob(rawBgImg) : Promise.resolve(null),
+      (isFxCustom && fxImgToExport) ? imageToBlob(fxImgToExport) : Promise.resolve(null),
+      (isBackCustom && backImgToExport) ? imageToBlob(backImgToExport) : Promise.resolve(null)
     ]);
-    const [subjUrl, bgUrl] = await Promise.all([
+    const [subjUrl, bgUrl, fxUrl, backUrl] = await Promise.all([
       blobToDataUrl(subjBlob),
-      blobToDataUrl(bgBlob)
+      blobToDataUrl(bgBlob),
+      blobToDataUrl(fxBlob),
+      blobToDataUrl(backBlob)
     ]);
 
     const cName = state.title || "未命名卡牌";
@@ -2588,14 +2617,23 @@ async function exportCurrentCardJson(triggerBtn) {
         name: cName,
         title: cName,
         subtitle: state.subtitle || "",
-        collection: state.collection || "文学部",
+        collection: state.collection || "水王级",
         technique: state.technique || "",
         tagline: state.tagline || "",
         edition: state.edition || "001 / 001",
-        borderStyle: state.borderStyle || "classic-gold",
-        colorTheme: state.colorTheme || "gold",
+        borderStyle: state.borderStyle || "ornamental",
+        colorTheme: state.colorTheme || "cyan",
+        backStyle: state.backStyle || "ambient",
         finish: state.finish || "pearl",
-        cardEffect: state.cardEffect || "none",
+        cardEffect: state.cardEffect || "star_glint",
+        customFxName: state.customFxName || "自定义特效",
+        customBackName: state.customBackName || "自定义卡背",
+        effectsDepth: state.effectsDepth ?? 0.14,
+        fxScale: state.fxScale ?? 1.0,
+        fxX: state.fxX ?? 0,
+        fxY: state.fxY ?? 0,
+        activeCustomFxId: state.activeCustomFxId,
+        activeCustomBackId: state.activeCustomBackId,
         subjectScale: state.subjectScale,
         subjectX: state.subjectX,
         subjectY: state.subjectY,
@@ -2610,7 +2648,13 @@ async function exportCurrentCardJson(triggerBtn) {
         fxGlow: state.fxGlow ?? 0.5,
         thumbDataUrl,
         subjectDataUrl: subjUrl,
-        bgDataUrl: bgUrl
+        bgDataUrl: bgUrl,
+        fxDataUrl: fxUrl,
+        backDataUrl: backUrl,
+        isCustomSubject: Boolean(rawSubjectImg),
+        isCustomBg: Boolean(rawBgImg),
+        isCustomFx: Boolean(fxBlob),
+        isCustomBack: Boolean(backBlob)
       }
     };
 
@@ -2749,11 +2793,38 @@ async function importCardsFromFile(file) {
       const isSubjCustom = raw.isCustomSubject !== undefined ? raw.isCustomSubject : (raw.subjectDataUrl ? true : !isDefaultSubjectBlob(subjBlob));
       const isBgCustom = raw.isCustomBg !== undefined ? raw.isCustomBg : (raw.bgDataUrl ? true : !isDefaultBgBlob(bgBlob));
       const cardId = "card_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+
+      // 自动将导入卡牌的自制卡背与特效注册至本地资产库，确保立即生效且可复用
+      if (backBlob) {
+        const backId = raw.activeCustomBackId || ("back_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6));
+        const backName = raw.customBackName || (raw.title ? raw.title + "卡背" : "自制卡背");
+        const backDataUrl = raw.backDataUrl || await blobToDataUrl(backBlob);
+        const backItem = { id: backId, name: backName, dataUrl: backDataUrl, createdAt: Date.now() };
+        await dbSaveCustomBack(backItem);
+        if (!customBackLibrary.some(x => x.id === backId)) {
+          const img = await blobToImage(backBlob);
+          customBackLibrary.push({ ...backItem, img });
+        }
+      }
+
+      if (fxBlob) {
+        const fxId = raw.activeCustomFxId || ("fx_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6));
+        const fxName = raw.customFxName || (raw.title ? raw.title + "特效" : "自制特效");
+        const fxDataUrl = raw.fxDataUrl || await blobToDataUrl(fxBlob);
+        const fxItem = { id: fxId, name: fxName, dataUrl: fxDataUrl, createdAt: Date.now() };
+        await dbSaveCustomFx(fxItem);
+        if (!customFxLibrary.some(x => x.id === fxId)) {
+          const img = await blobToImage(fxBlob);
+          customFxLibrary.push({ ...fxItem, img });
+        }
+      }
+
       const cardRecord = {
         ...raw,
         id: cardId,
         name: raw.name || raw.title || "导入卡牌",
         title: raw.title || raw.name || "导入卡牌",
+        backStyle: raw.backStyle || (backBlob ? "custom" : "ambient"),
         subjectBlob: subjBlob,
         bgBlob: bgBlob,
         fxBlob: fxBlob,
@@ -2772,6 +2843,8 @@ async function importCardsFromFile(file) {
       await dbSaveCard(cardRecord);
     }
 
+    renderCustomFxPills();
+    renderCustomBackOptions();
     await renderDeckGrid();
     await updateDeckBadge();
     showToast("✅ 成功导入 " + incomingCards.length + " 张卡牌！");
@@ -3815,29 +3888,51 @@ async function loadCardFromDeck(id, silent = false) {
       hasCustomBg = false;
     }
 
-    if (card.fxBlob) {
-      const fImg = await blobToImage(card.fxBlob);
-      if (fImg) {
-        customFxImg = fImg;
-        hasCustomFx = true;
-      }
-    } else {
-      customFxImg = null;
-      hasCustomFx = false;
-    }
-
     if (card.backBlob) {
       const kImg = await blobToImage(card.backBlob);
       if (kImg) {
         customBackImg = kImg;
         hasCustomBack = true;
+        const bId = card.activeCustomBackId || (card.backStyle?.startsWith("custom_") ? card.backStyle.replace("custom_", "") : "back_deck_" + id);
+        state.activeCustomBackId = bId;
+        state.customBackName = card.customBackName || (card.name ? card.name + "卡背" : "自制卡背");
+        state.backStyle = "custom_" + bId;
+        if (!customBackLibrary.some(x => x.id === bId)) {
+          const bDataUrl = await imageToDataUrl(kImg);
+          const bItem = { id: bId, name: state.customBackName, dataUrl: bDataUrl, createdAt: Date.now(), img: kImg };
+          customBackLibrary.push(bItem);
+          await dbSaveCustomBack({ id: bItem.id, name: bItem.name, dataUrl: bItem.dataUrl, createdAt: bItem.createdAt });
+        }
       }
     } else {
       customBackImg = null;
       hasCustomBack = false;
     }
 
-    // 3. 刷新控件与渲染
+    if (card.fxBlob) {
+      const fImg = await blobToImage(card.fxBlob);
+      if (fImg) {
+        customFxImg = fImg;
+        hasCustomFx = true;
+        const fId = card.activeCustomFxId || (card.cardEffect?.startsWith("custom_") ? card.cardEffect.replace("custom_", "") : "fx_deck_" + id);
+        state.activeCustomFxId = fId;
+        state.customFxName = card.customFxName || (card.name ? card.name + "特效" : "自制特效");
+        state.cardEffect = "custom_" + fId;
+        if (!customFxLibrary.some(x => x.id === fId)) {
+          const fDataUrl = await imageToDataUrl(fImg);
+          const fItem = { id: fId, name: state.customFxName, dataUrl: fDataUrl, createdAt: Date.now(), img: fImg };
+          customFxLibrary.push(fItem);
+          await dbSaveCustomFx({ id: fItem.id, name: fItem.name, dataUrl: fItem.dataUrl, createdAt: fItem.createdAt });
+        }
+      }
+    } else {
+      customFxImg = null;
+      hasCustomFx = false;
+    }
+
+    // 3. 刷新自制素材库、控件与3D渲染
+    renderCustomFxPills();
+    renderCustomBackOptions();
     syncAllInputsFromState();
     render2DPreview();
     syncTo3D();
@@ -4089,44 +4184,20 @@ async function initApp() {
     console.warn("Load card-config.json failed:", e);
   }
 
-  // 2. 检查本地浏览器是否另有单独保存的个性化配置
+  // 2. 侧边栏初始状态严格以网站官方标准基准 (card-config.json) 为准，确保开箱即为官方预设
   try {
-    const rawSaved = localStorage.getItem("holo_card_custom_default_settings");
-    if (rawSaved) {
-      const saved = JSON.parse(rawSaved);
-      Object.assign(state, saved);
-      applyFinishUI(state.finish);
-      setCardEffect(state.cardEffect);
-      fetch("/api/sync-settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: rawSaved
-      }).catch(() => {});
-    }
-  } catch (e) {
-    console.warn("Load custom default settings failed:", e);
-  }
+    // 清除可能残留的旧版覆盖缓存，确保进站展示官方基准
+    localStorage.removeItem("holo_card_custom_default_settings");
+  } catch (e) {}
 
-  // 检查牌库：若牌库已有保存的卡牌，进网站默认直接呈现第一张卡牌
+  // 载入网站官方默认素材与排版 (保证进站与刷新时 100% 对齐官方基准预设)
   async function loadInitialCard() {
-    try {
-      const cards = await dbGetAllCards();
-      if (cards && cards.length > 0) {
-        cards.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        const firstCard = cards[0];
-        await loadCardFromDeck(firstCard.id, true);
-        return;
-      }
-    } catch (e) {
-      console.warn("Auto-load first card from deck failed, falling back to defaults:", e);
-    }
-
-    // 牌库为空时的初始示例素材保底
     let loadedAssetCount = 0;
     const checkAssetsDone = () => {
       loadedAssetCount++;
       if (loadedAssetCount >= 2) {
         hideWorkshopLoading();
+        syncAllInputsFromState();
         render2DPreview();
         ensureSyncTo3D();
       }
