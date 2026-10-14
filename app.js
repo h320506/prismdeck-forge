@@ -672,6 +672,39 @@ async function init() {
     hasFx
   );
 
+  // 创建可突破卡牌 1x2 物理边界的 3D 破框背景网格 (bgMesh)
+  // 当用户放大背景或移动位置时，超出卡框的部分在 3D 空间中完整展示，永不被卡牌边界裁断
+  const bgGeometry = new THREE.PlaneGeometry(6.30, 9.45);
+  const bgMeshMat = new THREE.MeshBasicMaterial({
+    map: textures[1],
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide
+  });
+  const bgMesh = new THREE.Mesh(bgGeometry, bgMeshMat);
+  bgMesh.name = "holo_extended_bg";
+  bgMesh.renderOrder = -1; // 位于卡牌实体后方
+  root.add(bgMesh);
+
+  const updateBgTransform = (scale, x, y, depth) => {
+    if (!bgMesh) return;
+    const s = typeof scale === "number" ? scale : 1.0;
+    bgMesh.scale.set(s, s, 1.0);
+    const px = typeof x === "number" ? (x / 162.54) : 0;
+    const py = typeof y === "number" ? (-y / 162.54) : 0;
+    const dVal = typeof depth === "number" ? depth : -0.60;
+    const pz = -0.052 + Math.min(0.0, dVal) * 0.15;
+    bgMesh.position.set(px, py, pz);
+    // 当背景被放大 (> 1.01) 或产生位移时在 3D 场景中向外破框呈现
+    bgMesh.visible = (s > 1.01 || Math.abs(px) > 0.05 || Math.abs(py) > 0.05);
+  };
+  updateBgTransform(
+    p.bgScale ?? 1.0,
+    p.bgX ?? 0,
+    p.bgY ?? 0,
+    p.backgroundDepth ?? -0.60
+  );
+
   addShadow();
   const settingsHome=$('parameter-panel').parentElement;
   const responsiveSettings=()=>{
@@ -717,7 +750,9 @@ async function init() {
     flip,
     saveCard,
     updateFxTransform,
+    updateBgTransform,
     fxMesh,
+    bgMesh,
     recordGifFrames,
     recordVideoFrames,
     setFinish,
