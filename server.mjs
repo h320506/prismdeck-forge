@@ -64,6 +64,7 @@ http.createServer(async (req, res) => {
           if (settings.diff !== undefined) currentCfg.parameters.diff = settings.diff;
           if (settings.foil !== undefined) currentCfg.parameters.foil = settings.foil;
           if (settings.fxGlow !== undefined) currentCfg.parameters.fxGlow = settings.fxGlow;
+          if (settings.effectsDepth !== undefined) currentCfg.parameters.effectsDepth = settings.effectsDepth;
 
           await writeFile(cfgPath, JSON.stringify(currentCfg, null, 2), 'utf8');
 

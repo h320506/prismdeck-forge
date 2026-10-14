@@ -239,6 +239,11 @@
                   <div class="slider-label-row"><span>特效辉光程度</span><output id="ws-val-fx-glow">50%</output></div>
                   <input id="ws-fx-glow" type="range" min="0" max="1" step="0.01" value="0.50" class="drawer-range" />
                 </div>
+                <!-- 特效悬浮深度 (3D视差生效) -->
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>特效悬浮景深 (3D生效)</span><output id="ws-val-fx-depth">0.14</output></div>
+                  <input id="ws-fx-depth" type="range" min="-0.30" max="0.50" step="0.01" value="0.14" class="drawer-range" />
+                </div>
               </div>
             </section>
 
@@ -364,15 +369,7 @@
             <span class="btn-text-full">存入牌库</span>
             <span class="btn-text-short">存入</span>
           </button>
-          <button
-            class="icon-button"
-            id="info"
-            aria-label="作品信息"
-            title="作品信息"
-            disabled
-          >
-            <i data-lucide="info"></i>
-          </button>
+
           <button
             class="header-refine-btn"
             id="btn-open-b-drawer-header"
@@ -477,6 +474,19 @@
           <div class="artwork-title">
             <div class="title-line">
               <h1 id="card-title">八奈见杏菜</h1>
+              <button
+                class="icon-button info-inline-btn"
+                id="info"
+                aria-label="作品信息"
+                title="查看作品信息"
+                type="button"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </button>
               <span id="subtitle">败犬女主太多了！</span>
             </div>
             <p id="description">あはは、温水くん。</p>
@@ -654,6 +664,11 @@
                   <div class="slider-label-row"><span>特效辉光程度</span><output id="b-val-fx-glow">50%</output></div>
                   <input id="b-fx-glow" type="range" min="0" max="1" step="0.01" value="0.50" class="drawer-range" />
                 </div>
+                <!-- 特效悬浮深度 (3D视差生效) -->
+                <div class="slider-row">
+                  <div class="slider-label-row"><span>特效悬浮景深</span><output id="b-val-fx-depth">0.14</output></div>
+                  <input id="b-fx-depth" type="range" min="-0.30" max="0.50" step="0.01" value="0.14" class="drawer-range" />
+                </div>
               </div>
           </section>
 
@@ -798,7 +813,7 @@
               <span>一键部署到 Netlify（生成独立预览站）</span>
             </button>
             <span class="upload-box-desc" style="text-align: center; margin-top: -2px; margin-bottom: 2px;">
-              点击进入部署向导：生成纯享展台包并直达 Netlify Drop 免登录秒级上线！
+              提示：生成纯享展台包并直达 Netlify Drop；首次部署需登录 Netlify 账号认领 (Claim) 即可永久保留展示！
             </span>
             <button id="btn-export-netlify-viewer" class="btn-export-netlify-viewer" type="button" title="直接导出纯享展台压缩包">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -1035,12 +1050,12 @@
             <div class="deploy-guidance-box">
               <h4 class="deploy-guidance-title">
                 <span class="notice-badge">!</span>
-                <span>接下来的上传步骤（免注册·30秒上线）：</span>
+                <span>接下来的上传步骤（需登录 Netlify 账号认领以永久保留）：</span>
               </h4>
               <ol class="deploy-steps-ol">
                 <li>点击下方<strong>「直达 Netlify Drop 页面去上传」</strong>按钮，将在新标签页打开官方免登录上传页面；</li>
                 <li>在 Netlify Drop 页面中间的虚线大框中，直接将刚才下载的 <strong>.zip 压缩包拖入</strong>（或点击选择文件，<strong>无需解压</strong>）；</li>
-                <li>等待 3~5 秒上传与自动部署，即可获得专属的 <code>.netlify.app</code> 独立全息卡牌网址，随时分享给好友！</li>
+                <li>上传成功后，<strong>请务必在 Netlify 页面点击登录并认领 (Claim) 该站点</strong>，即可免费永久保留该独立展台域名，随时分享给好友！</li>
               </ol>
             </div>
           </div>

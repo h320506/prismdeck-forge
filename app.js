@@ -796,7 +796,10 @@ function fallback3D(error) {
     if ($("ws-foil")) $("ws-foil").disabled = value === "original";
   };
   $("info").disabled = false;
-  if ($("info")) $("info").onclick = () => $("about")?.showModal();
+  if ($("info")) $("info").onclick = () => {
+    if (typeof window.updateAboutModal === "function") window.updateAboutModal();
+    $("about")?.showModal();
+  };
   $("front").disabled = false;
   if ($("front")) $("front").onclick = () => setFlip(false);
   $("back").disabled = false;
@@ -1150,7 +1153,10 @@ function setupControls() {
   document
     .querySelectorAll("[data-finish]")
     .forEach((b) => (b.onclick = () => setFinish(b.dataset.finish)));
-  if ($("info")) $("info").onclick = () => $("about")?.showModal();
+  if ($("info")) $("info").onclick = () => {
+    if (typeof window.updateAboutModal === "function") window.updateAboutModal();
+    $("about")?.showModal();
+  };
   if ($("close-about")) $("close-about").onclick = () => $("about")?.close();
   if ($("about")) {
     $("about").onclick = (e) => {

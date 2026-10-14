@@ -1375,3 +1375,28 @@ body.is-card-expanded .stage-tools-bottom-left {
   .btn-text-short { display: inline; }
   .btn-text-full { display: none; }
 }
+
+.info-inline-btn {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% !important;
+  border: 1px solid rgba(197, 160, 89, 0.45) !important;
+  background: rgba(197, 160, 89, 0.12) !important;
+  color: var(--accent, #9e7a33) !important;
+  cursor: pointer;
+  padding: 0 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+.info-inline-btn:hover {
+  background: rgba(197, 160, 89, 0.28) !important;
+  border-color: rgba(197, 160, 89, 0.9) !important;
+  transform: scale(1.12);
+  color: #7b5919 !important;
+}
+

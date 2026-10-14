@@ -33,7 +33,8 @@ const state = {
   bgDepth: -0.18,
   diff: 1.0,
   foil: 0.52,
-  fxGlow: 0.5
+  fxGlow: 0.5,
+  effectsDepth: 0.14
 };
 
 let rawSubjectImg = null;
@@ -698,10 +699,22 @@ function sync3DUniforms() {
   if (u.uDiff) u.uDiff.value = state.diff ?? 1.0;
   if (u.uFoil) u.uFoil.value = state.foil;
   if (u.uFxGlow) u.uFxGlow.value = state.fxGlow ?? 0.5;
+  if (u.uFxDepth) u.uFxDepth.value = state.effectsDepth ?? 0.14;
   if (state.finish && typeof window.__holo.setFinish === "function") {
     window.__holo.setFinish(state.finish);
   }
 }
+
+// 动态刷新作品信息弹窗内容 (与当前卡牌标题、出处与编号实时同步)
+function updateAboutModal() {
+  const at = $("about-title");
+  if (at) at.textContent = [state.subtitle, state.title].filter(Boolean).join(" / ");
+  const ad = $("about-description");
+  if (ad) ad.textContent = state.tagline || (state.subtitle ? state.subtitle + " · 全息典藏卡片" : "全息典藏卡片");
+  const ae = $("about-edition");
+  if (ae) ae.textContent = state.edition || "001 / 001";
+}
+window.updateAboutModal = updateAboutModal;
 
 // 丝滑局部更新流水线 (针对 Page B 高频滑条拖拽做专属 RAF 节流与防抖优化，消除 150 万像素 CPU 阻塞)
 let lineartTimer = null;
@@ -747,6 +760,7 @@ function syncTextAndBack3D() {
       const backCvs = drawBackCanvas(state, rawBgImg, rawSubjectImg);
       safeUpdateCanvasTexture(window.__holo.uniforms.tBack, backCvs);
     }
+    updateAboutModal();
   });
 }
 
@@ -799,6 +813,7 @@ function syncTo3D() {
   if (dEl) dEl.textContent = state.tagline;
   const eEl = $("edition");
   if (eEl) eEl.textContent = state.edition;
+  updateAboutModal();
 
   // 6. 卡背纹理更新 (支持4款卡背风格与正面文字/首字/配色完全实时动态联动)
   if (window.__holo && window.__holo.uniforms && window.__holo.uniforms.tBack) {
@@ -1801,6 +1816,23 @@ function bindSidebarInputs(prefix, isPageB = false) {
       if (isPageB) sync3DUniforms();
     };
   }
+
+  // 7. 特效悬浮深度调节 (3D 景深视差)
+  const fxDepth = $(prefix + "-fx-depth");
+  const fxDepthVal = $(prefix + "-val-fx-depth");
+  if (fxDepth) {
+    fxDepth.value = state.effectsDepth ?? 0.14;
+    if (fxDepthVal) fxDepthVal.textContent = (state.effectsDepth ?? 0.14).toFixed(2);
+    fxDepth.oninput = (e) => {
+      state.effectsDepth = parseFloat(e.target.value);
+      if (fxDepthVal) fxDepthVal.textContent = state.effectsDepth.toFixed(2);
+      const other = $(prefix === "ws" ? "b-fx-depth" : "ws-fx-depth");
+      const otherVal = $(prefix === "ws" ? "b-val-fx-depth" : "ws-val-fx-depth");
+      if (other) other.value = state.effectsDepth;
+      if (otherVal) otherVal.textContent = fxDepthVal.textContent;
+      if (isPageB) sync3DUniforms();
+    };
+  }
 }
 
 
@@ -2649,6 +2681,7 @@ async function saveCurrentCardToDeck(triggerBtn) {
       diff: state.diff ?? 1.0,
       foil: state.foil,
       fxGlow: state.fxGlow ?? 0.5,
+      effectsDepth: state.effectsDepth ?? 0.14,
       thumbDataUrl,
       subjectBlob: subjBlob,
       bgBlob: bgBlob,
@@ -2981,6 +3014,8 @@ function syncAllInputsFromState() {
     setTxt("val-foil", Math.round(state.foil * 100) + "%");
     setVal("fx-glow", state.fxGlow ?? 0.5);
     setTxt("val-fx-glow", Math.round((state.fxGlow ?? 0.5) * 100) + "%");
+    setVal("fx-depth", state.effectsDepth ?? 0.14);
+    setTxt("val-fx-depth", (state.effectsDepth ?? 0.14).toFixed(2));
   });
 
   const f = state.finish || "pearl";
@@ -3040,6 +3075,7 @@ async function loadCardFromDeck(id, silent = false) {
     state.diff = card.diff ?? state.diff ?? 1.0;
     state.foil = card.foil ?? state.foil;
     state.fxGlow = card.fxGlow ?? state.fxGlow ?? 0.5;
+    state.effectsDepth = card.effectsDepth ?? state.effectsDepth ?? 0.14;
 
     // 2. 恢复图像并标记来源属性
     if (card.subjectBlob) {
@@ -3276,6 +3312,7 @@ async function initApp() {
         if (p.diff !== undefined) state.diff = p.diff;
         if (p.foil !== undefined) state.foil = p.foil;
         if (p.fxGlow !== undefined) state.fxGlow = p.fxGlow;
+        if (p.effectsDepth !== undefined) state.effectsDepth = p.effectsDepth;
       }
       applyFinishUI(state.finish);
       setCardEffect(state.cardEffect);
