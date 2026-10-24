@@ -10,6 +10,44 @@ function $(id) {
   return document.getElementById(id);
 }
 
+// A 界面不蒜子统计：动态异步加载；第三方失败或超时只隐藏统计，不影响网站主流程。
+function initBusuanziCounter() {
+  const counter = $("site-visit-counter");
+  const pvNode = $("busuanzi_site_pv");
+  const uvNode = $("busuanzi_site_uv");
+  if (!counter || !pvNode || !uvNode) return;
+
+  let settled = false;
+  let observer = null;
+  let timeoutId = 0;
+  const hasValues = () => {
+    const valuePattern = /^\d[\d,.KWE]*$/i;
+    return valuePattern.test(pvNode.textContent.trim()) && valuePattern.test(uvNode.textContent.trim());
+  };
+  const finish = (available) => {
+    if (settled) return;
+    settled = true;
+    observer?.disconnect();
+    clearTimeout(timeoutId);
+    counter.hidden = !available;
+    counter.classList.toggle("is-ready", available);
+  };
+
+  observer = new MutationObserver(() => {
+    if (hasValues()) finish(true);
+  });
+  observer.observe(counter, { childList: true, subtree: true, characterData: true });
+  timeoutId = window.setTimeout(() => finish(false), 6500);
+
+  const script = document.createElement("script");
+  script.src = "https://cdn.busuanzi.cc/busuanzi/3.6.9/busuanzi.min.js";
+  script.async = true;
+  script.referrerPolicy = "strict-origin-when-cross-origin";
+  script.onerror = () => finish(false);
+  script.onload = () => { if (hasValues()) finish(true); };
+  document.head.appendChild(script);
+}
+
 // 官方标准默认基准配置 (用于新卡牌与缺失字段纯净回退，杜绝卡牌间跨卡污染)
 const DEFAULTS = {
   title: "八奈见杏菜",
@@ -4844,6 +4882,9 @@ async function initApp() {
 
   const bBtnSave = $("b-btn-save-changes");
   if (bBtnSave) bBtnSave.onclick = handleSaveCurrentChanges;
+
+  // 主功能初始化完成后异步加载第三方统计，故障时自动隐藏。
+  initBusuanziCounter();
 
   // 初始化展台卡牌放大切换
   initCardZoom();

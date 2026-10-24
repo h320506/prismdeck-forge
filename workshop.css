@@ -2906,3 +2906,37 @@ body.is-card-expanded .stage-tools-bottom-left {
 }
 
 
+/* ==========================================================================
+   A 界面页脚不蒜子访问统计（服务不可用时整块隐藏）
+   ========================================================================== */
+.workshop-footer {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 20px calc(10px + env(safe-area-inset-bottom, 0px));
+  color: #7b8178;
+}
+.site-visit-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  padding: 0 13px;
+  border: 1px solid rgba(197,160,89,.22);
+  border-radius: 16px;
+  background: rgba(255,255,255,.48);
+  font-variant-numeric: tabular-nums;
+}
+.site-visit-counter[hidden] { display: none !important; }
+.visit-counter-item { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.visit-counter-label { font-size: 10px; color: #8a9087; letter-spacing: .06em; }
+.visit-counter-item strong { font-size: 11px; font-weight: 650; color: #4d514b; }
+.visit-counter-divider { width: 1px; height: 12px; background: rgba(197,160,89,.3); }
+@media (max-width: 768px) {
+  .workshop-footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 42; min-height: 34px; padding: 3px 12px calc(5px + env(safe-area-inset-bottom, 0px)); pointer-events: none; }
+  .site-visit-counter { min-height: 24px; gap: 9px; padding: 0 10px; background: rgba(250,250,248,.82); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .visit-counter-label { font-size: 9px; }
+  .visit-counter-item strong { font-size: 10px; }
+}
+

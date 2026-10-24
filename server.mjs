@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import JSZip from 'jszip';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const port = Number(process.env.PORT || 4173);
+const port = Number(process.env.PORT || 4174);
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
