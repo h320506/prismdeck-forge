@@ -1,7 +1,7 @@
-# Holo Card Studio · 3D 全息交互典藏卡牌工坊
+# PrismDeck Forge · 3D 全息交互典藏卡牌工坊
 
 <p align="center">
-  <img src="./assets/subject.png" width="180" alt="Holo Card Studio" />
+  <img src="./assets/subject.png" width="180" alt="PrismDeck Forge" />
 </p>
 
 <p align="center">
@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://card.128813.xyz/"><strong>在线演示</strong></a>
   ·
-  <a href="https://github.com/h320506/holo-card-studio"><strong>GitHub 仓库</strong></a>
+  <a href="https://github.com/h320506/prismdeck-forge"><strong>GitHub 仓库</strong></a>
 </p>
 
 <p align="center">
@@ -35,7 +35,7 @@
 
 ## 🌟 项目简介
 
-**Holo Card Studio** 是一套 Web 3D 全息实体质感卡牌创作工坊与鉴赏平台。用户可以自由上传任意动漫角色、摄影作品或原创插画，自主定制卡面标题、典藏系列编号、镭射折射率、全息光效、浮雕深度以及烫金边框工艺，并在 3D 展台中体验如同握持真实实体卡牌般的物理视差与微粒折射光影。
+**PrismDeck Forge** 是一套 Web 3D 全息实体质感卡牌创作工坊与鉴赏平台。用户可以自由上传任意动漫角色、摄影作品或原创插画，自主定制卡面标题、典藏系列编号、镭射折射率、全息光效、浮雕深度以及烫金边框工艺，并在 3D 展台中体验如同握持真实实体卡牌般的物理视差与微粒折射光影。
 
 项目采用原生 JavaScript（ES Modules）与 Three.js 构建，并针对桌面端和移动端交互进行适配；支持触控操作与兼容设备上的陀螺仪控制。
 
@@ -75,7 +75,7 @@
 ## 📂 目录结构
 
 ```text
-holo-card-studio/
+prismdeck-forge/
 ├── assets/                  # 3D 模型、默认高清材质与特效图层
 │   ├── card.glb             # 卡片高精度 3D 几何网格
 │   ├── subject.png          # 默认主体图层 (经瘦身优化)
@@ -113,8 +113,8 @@ holo-card-studio/
 
 ### 1. 克隆仓库与安装依赖
 ```bash
-git clone https://github.com/h320506/holo-card-studio.git
-cd holo-card-studio
+git clone https://github.com/h320506/prismdeck-forge.git
+cd prismdeck-forge
 npm install
 ```
 
@@ -186,10 +186,10 @@ Cloudflare 控制台已将 Workers 与 Pages 整合为“Workers 和 Pages”入
 #### 步骤 1：在 Cloudflare 控制台新建应用
 1. 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)；
 2. 进入左侧菜单 **「Workers 和 Pages」** -> 点击蓝色的 **「创建应用程序」** 按钮；
-3. 选择 **「连接到 Git」**，授权并选中您的 `holo-card-studio` 仓库。
+3. 选择 **「连接到 Git」**，授权并选中您的 `prismdeck-forge` 仓库。
 
 #### 步骤 2：配置构建与部署参数
-- **项目名称 (Project name)**：`holo-card-studio`
+- **项目名称 (Project name)**：`prismdeck-forge`
 - **构建命令 (Build command)**：`npm run build`
 - **部署命令 (Deploy command)**：`npx wrangler deploy`
 - **高级设置 - 路径 (Root directory)**：`.`
@@ -209,11 +209,11 @@ Cloudflare 控制台已将 Workers 与 Pages 整合为“Workers 和 Pages”入
 #### 步骤 1：在 Netlify 导入项目
 1. 访问 [Netlify 控制台](https://app.netlify.com/) 并登录；
 2. 点击 **"Add new site"** -> **"Import an existing project"**；
-3. 选择 **GitHub** 并授权选择您的 `holo-card-studio` 仓库；
+3. 选择 **GitHub** 并授权选择您的 `prismdeck-forge` 仓库；
 4. Netlify 会自动检测并读取仓库根目录下的 `netlify.toml`：
    - **Build command**: `npm run build`
    - **Publish directory**: `dist`
-5. 点击 **"Deploy holo-card-studio"** 并等待平台完成构建与发布；实际时间取决于网络和平台队列。
+5. 点击 **"Deploy prismdeck-forge"** 并等待平台完成构建与发布；实际时间取决于网络和平台队列。
 
 ---
 

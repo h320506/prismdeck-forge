@@ -43,4 +43,4 @@ http.createServer(async (req, res) => {
     res.writeHead(404);
     res.end('Not found');
   }
-}).listen(port, '127.0.0.1', () => console.log('Holo Card Studio: http://127.0.0.1:' + port));
+}).listen(port, '127.0.0.1', () => console.log('PrismDeck Forge: http://127.0.0.1:' + port));

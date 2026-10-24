@@ -431,7 +431,7 @@ function drawBackCanvas(cfg, bgImg, subjImg) {
 
   const title = (cfg.title || "八奈见杏菜").trim();
   const subtitle = (cfg.subtitle || "").trim();
-  const collection = (cfg.collection || "HOLO STUDIO").trim();
+  const collection = (cfg.collection || "PRISMDECK").trim();
   const edition = (cfg.edition || "001 / 001").trim();
   const tagline = (cfg.tagline || "").trim();
   const firstChar = title.slice(0, 1) || "卡";

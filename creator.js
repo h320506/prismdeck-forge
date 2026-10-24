@@ -37,7 +37,7 @@ function waitForHolo(callback, maxAttempts = 60) {
       callback();
     } else if (attempts > maxAttempts) {
       clearInterval(timer);
-      console.warn("Holo Card viewer failed to initialize in time.");
+      console.warn("PrismDeck viewer failed to initialize in time.");
     }
   }, 100);
 }

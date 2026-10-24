@@ -368,7 +368,7 @@ function backTexture() {
   ctx.fillText((config.title || "A").slice(0, 1), 512, 846);
   ctx.font = "24px Arial";
   ctx.fillStyle = "#737b70";
-  ctx.fillText(config.collection || "HOLO STUDIO", 512, 245);
+  ctx.fillText(config.collection || "PRISMDECK", 512, 245);
   ctx.font = '34px "Songti SC", serif';
   ctx.fillText(config.subtitle || config.title, 512, 1020);
   ctx.font = "18px Arial";

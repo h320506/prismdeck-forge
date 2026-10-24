@@ -1,6 +1,6 @@
 # NOTICE
 
-Holo Card Studio is derived from and inspired by RuiC Card Skill:
+PrismDeck Forge is derived from and inspired by RuiC Card Skill:
 
 - Upstream: https://github.com/HRuiCcc/RuiC-card-skill
 - Upstream copyright: Copyright (c) 2026 HRuiCcc

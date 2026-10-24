@@ -1,5 +1,5 @@
 {
-  "name": "holo-card-studio",
+  "name": "prismdeck-forge",
   "version": "1.0.0",
   "description": "基于 Three.js 与 WebGL 的 3D 全息卡牌制作工坊",
   "type": "module",
@@ -21,11 +21,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/h320506/holo-card-studio.git"
+    "url": "git+https://github.com/h320506/prismdeck-forge.git"
   },
   "homepage": "https://card.128813.xyz/",
   "bugs": {
-    "url": "https://github.com/h320506/holo-card-studio/issues"
+    "url": "https://github.com/h320506/prismdeck-forge/issues"
   },
   "engines": {
     "node": ">=18"
