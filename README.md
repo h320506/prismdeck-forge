@@ -5,7 +5,13 @@
 </p>
 
 <p align="center">
-  <strong>基于 WebGL 与 Three.js 的下一代 3D 沉浸式全息典藏卡牌制作工坊与鉴赏展台</strong>
+  <strong>基于 WebGL 与 Three.js 的 3D 全息典藏卡牌制作工坊与鉴赏展台</strong>
+</p>
+
+<p align="center">
+  <a href="https://card.128813.xyz/"><strong>在线演示</strong></a>
+  ·
+  <a href="https://github.com/h320506/holo-card-studio"><strong>GitHub 仓库</strong></a>
 </p>
 
 <p align="center">
@@ -17,11 +23,21 @@
 
 ---
 
+## 🌐 在线演示
+
+- **正式演示站**：<https://card.128813.xyz/>
+- 支持桌面与移动端浏览器；移动端可使用陀螺仪检视卡牌。
+- 演示站中的默认角色与美术素材仅用于个人学习、技术研究和非商业展示，相关权利归原作者及原权利方所有。
+
+> 若演示站未及时显示最新版本，请强制刷新页面或清除该站点缓存后重试。
+
+---
+
 ## 🌟 项目简介
 
-**Holo Card Studio** 是一套开箱即用的 Web 3D 全息实体质感卡牌创作工坊与鉴赏平台。用户可以自由上传任意动漫角色、摄影作品或原创插画，自主定制卡面标题、典藏系列编号、镭射折射率、全息光效、浮雕深度以及烫金边框工艺，并在 3D 展台中体验如同握持真实实体卡牌般的物理视差与微粒折射光影。
+**Holo Card Studio** 是一套 Web 3D 全息实体质感卡牌创作工坊与鉴赏平台。用户可以自由上传任意动漫角色、摄影作品或原创插画，自主定制卡面标题、典藏系列编号、镭射折射率、全息光效、浮雕深度以及烫金边框工艺，并在 3D 展台中体验如同握持真实实体卡牌般的物理视差与微粒折射光影。
 
-项目采用纯原生 JavaScript (ESM) + Three.js 构建，兼具极限轻量的加载性能（核心包经极致优化压缩，首屏加载仅需数百毫秒）与移动端深度适配（支持手机重力感应陀螺仪）。
+项目采用原生 JavaScript（ES Modules）与 Three.js 构建，并针对桌面端和移动端交互进行适配；支持触控操作与兼容设备上的陀螺仪控制。
 
 ---
 
@@ -36,15 +52,23 @@
   - **自适应拖拽旋转**：实时捕获当前物理旋转角，正反面翻转自适应反转手势符号；
   - **双向同步架构**：制作工坊 (Page A) 与 3D 展台 (Page B) 实时双向热同步。
 - 💾 **本地离线牌库系统**：
-  - 基于浏览器原生的 IndexedDB 本地数据库存储，不设上限；
+  - 基于浏览器原生 IndexedDB 保存；实际容量受浏览器、设备空间、隐私模式与站点存储策略限制；
   - 支持多套卡牌保存、一键载入、卡牌改名重命名、删除管理；
   - 纯前端本地持久化，断网环境下依然可随时鉴赏。
-- 📤 **100% 无损卡牌导出与导入**：
+- 📤 **卡牌数据导出与导入**：
   - 支持一键导出单张卡牌为 `.json` 配置文件（内嵌原始无损高清大图与完整 3D 排版参数）；
-  - 好友在任何手机或电脑浏览器中打开网站，进入牌库点击「导入卡牌」即可 1:1 无损呈现，永不模糊失真。
+  - 好友可在支持相关 Web API 的现代浏览器中导入卡牌数据；实际呈现效果受浏览器、设备性能和原始素材质量影响。
 - 🚀 **Netlify 自动化一键部署与纯享展台包**：
   - **独立纯享展台包**：一键导出专用于展示该张卡牌的独立纯净网站（移除所有工坊与侧边栏）；
-  - **云端一键自动部署**：内置 Netlify Functions 云函数与 Drop 部署通道，一键生成属于该卡牌的独立公网域名（如 `https://xxx.netlify.app`）。
+  - **部署引导流程**：生成独立展台 ZIP 后，可前往 Netlify Drop 上传；登录并认领站点后可长期保留对应预览站。
+- 🎞️ **动态内容导出**：
+  - 400 × 560、20 FPS、3 秒循环 GIF；
+  - 支持 WebCodecs 时导出 1080 × 1512、60 FPS、3 秒 H.264 MP4，并提供浏览器兼容性降级路径；
+  - 实际可用性与导出速度取决于浏览器能力和设备性能。
+- 🧩 **多素材与双层背景**：
+  - 主体、背景、卡面特效、卡背 4 类素材自由组合；
+  - A+B 双层背景结合清晰原画层、高斯柔焦底衬层与微量出血位，降低极限视角露底和边缘拉丝；
+  - 支持自定义特效、卡背及其浏览器本地素材库。
 
 ---
 
@@ -64,7 +88,9 @@ holo-card-studio/
 │       └── deploy-temp-site.mjs # 自动化创建独立预览站的云端代理
 ├── _headers                 # Netlify 全局安全跨域头与缓存控制
 ├── _redirects               # Netlify API 路由重写规则
-├── netlify.toml             # Netlify 官方 CI/CD 自动化构建配置文件
+├── netlify.toml             # Netlify 构建与部署配置
+├── wrangler.jsonc           # Cloudflare Workers 静态资源配置
+├── .assetsignore            # Cloudflare 静态资源排除规则
 ├── index.html               # 网页核心入口
 ├── style.css                # 3D 展台、全局排版与视效样式
 ├── workshop.css             # 制作工坊侧边栏、牌库与半透明玻璃拟物样式
@@ -86,7 +112,7 @@ holo-card-studio/
 
 ### 1. 克隆仓库与安装依赖
 ```bash
-git clone https://github.com/your-username/holo-card-studio.git
+git clone https://github.com/h320506/holo-card-studio.git
 cd holo-card-studio
 npm install
 ```
@@ -165,11 +191,10 @@ Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Wo
 - **项目名称 (Project name)**：`holo-card-studio`
 - **构建命令 (Build command)**：`npm run build`
 - **部署命令 (Deploy command)**：`npx wrangler deploy`
-- **预览命令 (Preview command)**：`npx wrangler preview`
 - **高级设置 - 路径 (Root directory)**：`.`
 
 #### 步骤 3：点击「部署」完成上线
-点击 **「部署」** 按钮，系统将在 15~30 秒内完成构建并分配专属 HTTPS 域名（如 `https://holo-card-studio.xxx.workers.dev`）。
+点击“部署”后，Cloudflare 会执行构建并分配 HTTPS 访问地址；实际完成时间取决于依赖安装、网络和平台队列。
 
 > 💡 **避坑说明 (已内置防御)**：  
 > 本项目已在根目录包含 `.assetsignore` 规则，自动忽略 `node_modules` 庞大的开发依赖，避免触发 Cloudflare Workers 静态资源单个文件超过 25 MiB 的限制错误。
@@ -178,7 +203,7 @@ Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Wo
 
 ### 方案 B：部署上线至 Netlify (传统标准流程)
 
-本项目已配置完整的 **Netlify CI/CD 与云函数运行环境**（支持一键临时匿名展台部署通道）：
+本项目已配置 Netlify 构建与 Functions 目录；站内独立展台发布采用“生成 ZIP → 前往 Netlify Drop 上传并认领”的引导流程：
 
 #### 步骤 1：在 Netlify 导入项目
 1. 访问 [Netlify 控制台](https://app.netlify.com/) 并登录；
@@ -188,11 +213,11 @@ Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Wo
    - **Build command**: `npm run build`
    - **Publish directory**: `.`
    - **Functions directory**: `netlify/functions`
-5. 点击 **"Deploy holo-card-studio"**，约 30 秒即可全自动完成全球边缘分发。
+5. 点击 **"Deploy holo-card-studio"** 并等待平台完成构建与发布；实际时间取决于网络和平台队列。
 
 ---
 
-### 步骤 3：绑定自定义独立域名（可选）
+### 绑定自定义独立域名（可选）
 在 Netlify 或 Cloudflare 后台的域名管理中，添加您自己的域名（例如 `card.yourdomain.com`），按提示解析 DNS 即可拥有专属品牌的 3D 卡牌网站。
 
 ---
@@ -208,11 +233,14 @@ Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Wo
 
 ## 📜 开源协议与版权声明
 
-- **源码许可**：本项目前端交互逻辑、3D 着色器管线与工坊架构基于 [MIT License](./LICENSE) 开源；
-- **美术素材版权**：仓库内附带的默认示例立绘与背景素材仅供演示学习与个人非商业鉴赏，版权归属原著作权方所有。使用者自行上传与制作的卡牌美术版权归属上传者本人，请勿用于任何商业用途。
+- **源码许可**：软件代码按 [MIT License](./LICENSE) 发布；
+- **素材许可**：默认示例角色与美术素材不因代码采用 MIT License 而自动获得相同授权；
+- **使用责任**：示例素材仅用于个人学习、技术研究和非商业展示。使用者应自行确认上传素材、生成素材及导出内容的版权和使用权限。
 
 ---
 
-<p align="center">
-  <sub>Made with ❤️ by Holo Card Studio · 光影之间，自有回响</sub>
-</p>
+## 🙏 上游项目与致谢
+
+本项目是在 [HRuiCcc/RuiC-card-skill](https://github.com/HRuiCcc/RuiC-card-skill)（RuiC Card Skill，MIT License）基础上进行的二次开发。当前仓库在其 3D 全息卡牌分层、视差材质与 Three.js 浏览器展示思路之上，继续扩展了可视化工坊、本地牌库、多素材管理、卡背设计、移动端交互、GIF/MP4 导出、部署流程与访问统计等功能。
+
+感谢原项目作者 **HRuiCcc** 及其贡献者。原项目的版权和 MIT 许可声明请参见上游仓库；本仓库的修改部分及完整许可说明见 [LICENSE](./LICENSE)。
