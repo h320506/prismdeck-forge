@@ -10,42 +10,41 @@ function $(id) {
   return document.getElementById(id);
 }
 
-// A 界面不蒜子统计：动态异步加载；第三方失败或超时只隐藏统计，不影响网站主流程。
-function initBusuanziCounter() {
+// A 界面 Saobby 网页计数器：请求独立计数器 ID；第三方失败或超时只隐藏统计。
+async function initVisitCounter() {
   const counter = $("site-visit-counter");
-  const pvNode = $("busuanzi_site_pv");
-  const uvNode = $("busuanzi_site_uv");
-  if (!counter || !pvNode || !uvNode) return;
+  const visitsNode = $("site-total-visits");
+  const visitorsNode = $("site-total-visitors");
+  if (!counter || !visitsNode || !visitorsNode) return;
 
-  let settled = false;
-  let observer = null;
-  let timeoutId = 0;
-  const hasValues = () => {
-    const valuePattern = /^\d[\d,.KWE]*$/i;
-    return valuePattern.test(pvNode.textContent.trim()) && valuePattern.test(uvNode.textContent.trim());
-  };
-  const finish = (available) => {
-    if (settled) return;
-    settled = true;
-    observer?.disconnect();
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 6500);
+  try {
+    const response = await fetch("https://w.saobby.com/api/visit/xosu9uca", {
+      method: "GET",
+      mode: "cors",
+      cache: "no-store",
+      credentials: "omit",
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    const visits = Number(result?.data?.visits);
+    const visitors = Number(result?.data?.ips);
+    if (!result?.success || !Number.isFinite(visits) || !Number.isFinite(visitors)) {
+      throw new Error("Invalid counter response");
+    }
+    const formatter = new Intl.NumberFormat("zh-CN");
+    visitsNode.textContent = formatter.format(visits);
+    visitorsNode.textContent = formatter.format(visitors);
+    counter.hidden = false;
+    counter.classList.add("is-ready");
+  } catch (error) {
+    counter.hidden = true;
+    if (error?.name !== "AbortError") console.warn("Visit counter unavailable:", error);
+  } finally {
     clearTimeout(timeoutId);
-    counter.hidden = !available;
-    counter.classList.toggle("is-ready", available);
-  };
-
-  observer = new MutationObserver(() => {
-    if (hasValues()) finish(true);
-  });
-  observer.observe(counter, { childList: true, subtree: true, characterData: true });
-  timeoutId = window.setTimeout(() => finish(false), 6500);
-
-  const script = document.createElement("script");
-  script.src = "https://cdn.busuanzi.cc/busuanzi/3.6.9/busuanzi.min.js";
-  script.async = true;
-  script.referrerPolicy = "strict-origin-when-cross-origin";
-  script.onerror = () => finish(false);
-  script.onload = () => { if (hasValues()) finish(true); };
-  document.head.appendChild(script);
+  }
 }
 
 // 官方标准默认基准配置 (用于新卡牌与缺失字段纯净回退，杜绝卡牌间跨卡污染)
@@ -4884,7 +4883,7 @@ async function initApp() {
   if (bBtnSave) bBtnSave.onclick = handleSaveCurrentChanges;
 
   // 主功能初始化完成后异步加载第三方统计，故障时自动隐藏。
-  initBusuanziCounter();
+  initVisitCounter();
 
   // 初始化展台卡牌放大切换
   initCardZoom();
