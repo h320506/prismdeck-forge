@@ -913,8 +913,8 @@
               自动倾斜翻转检视光效，生成首尾无缝循环的高清 GIF，适合微信原图发送
             </span>
 
-            <!-- 模块 4 第二项：1080P 60帧 MP4 动态短视频一键录制 -->
-            <button id="btn-record-card-mp4" class="btn-record-card-mp4" type="button" title="一键导出 1080P 60 帧无缝循环 MP4 动态短视频">
+            <!-- 模块 4 第二项：1080P 60帧动态短视频导出 -->
+            <button id="btn-record-card-mp4" class="btn-record-card-mp4" type="button" title="导出 1080P 60 帧动态短视频；具体格式取决于浏览器能力">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
                 <line x1="7" y1="2" x2="7" y2="22"></line>
@@ -925,10 +925,10 @@
                 <line x1="17" y1="17" x2="22" y2="17"></line>
                 <line x1="17" y1="7" x2="22" y2="7"></line>
               </svg>
-              <span>导出 1080P 60帧动态短视频 (.mp4)</span>
+              <span>导出 1080P 60帧动态短视频</span>
             </button>
             <span class="upload-box-desc" style="text-align: center; margin-top: -4px; margin-bottom: 6px;">
-              3秒 60帧无缝循环 1080P 超清视频，光效细节拉满，适合小红书、抖音与B站发布
+              3 秒、60 帧、1080 × 1512 动态视频；支持时导出 H.264 MP4，否则可能导出 WebM
             </span>
 
             <button id="btn-sidebar-save-deck" class="btn-sidebar-save-deck" type="button">
@@ -1254,7 +1254,7 @@
       </div>
     </div>
 
-    <!-- 1080P 60帧 MP4 视频预览与下载弹窗 -->
+    <!-- 1080P 60帧视频预览与下载弹窗 -->
     <div id="modal-mp4-preview" class="deck-modal hidden">
       <div class="deck-modal-backdrop" id="mp4-backdrop"></div>
       <div class="deck-modal-dialog deploy-dialog" style="max-width: 460px !important;">
@@ -1275,12 +1275,12 @@
             <span id="mp4-filesize-badge" class="badge-gold" style="background: rgba(197, 160, 89, 0.2); color: var(--accent, #9e7a33); padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">约 3.5 MB</span>
             <span style="font-size: 12px; opacity: 0.75; color: #555d52;">1080P · 60 FPS · 3秒无缝循环</span>
           </div>
-          <p class="modal-tip-text" style="font-size: 11.5px; color: #636b5f; margin: 2px 0; line-height: 1.5;">🎬 标准 H.264 MP4 格式，全光效粒子无损绽放，完美兼容小红书、抖音、B站、朋友圈与相册播放。</p>
+          <p class="modal-tip-text" style="font-size: 11.5px; color: #636b5f; margin: 2px 0; line-height: 1.5;">浏览器支持 H.264 WebCodecs 时生成 MP4，否则可能使用 MediaRecorder 生成 MP4 或 WebM；平台兼容性以实际文件为准。</p>
         </div>
         <div class="deploy-dialog-footer" style="padding-top: 10px;">
           <button id="btn-download-mp4" class="btn-deploy-primary btn-direct-drop" type="button" style="width: 100%;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            <span>下载 1080P MP4 视频 (.mp4)</span>
+            <span>下载 1080P 视频</span>
           </button>
         </div>
       </div>

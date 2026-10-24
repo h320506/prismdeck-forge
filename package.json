@@ -1,16 +1,15 @@
 {
   "name": "holo-card-studio",
   "version": "1.0.0",
-  "description": "3D 全息交互典藏卡牌工坊与展示台 (Three.js + WebGL + Netlify)",
+  "description": "基于 Three.js 与 WebGL 的 3D 全息卡牌制作工坊",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "build": "esbuild app.js --bundle --minify --format=esm --target=es2020 --outfile=app.bundle.js && esbuild site.js --bundle --minify --format=esm --target=es2020 --outfile=site.bundle.js"
+    "build": "node scripts/build.mjs"
   },
   "dependencies": {
-    "@imgly/background-removal": "^1.7.0",
     "gifenc": "^1.0.3",
     "jszip": "^3.10.2",
     "mp4-muxer": "^5.2.2",
@@ -18,5 +17,17 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/h320506/holo-card-studio.git"
+  },
+  "homepage": "https://card.128813.xyz/",
+  "bugs": {
+    "url": "https://github.com/h320506/holo-card-studio/issues"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

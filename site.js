@@ -10,6 +10,23 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function safeDeckImageSource(value) {
+  const source = String(value || "");
+  return /^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(source)
+    ? source
+    : "./assets/subject.png";
+}
+
 // Saobby 网页计数器配置：Fork 用户应替换 counterId，并将自己的正式域名加入白名单。
 const VISIT_COUNTER_CONFIG = {
   counterId: "xosu9uca",
@@ -1611,7 +1628,24 @@ async function recordCardMp4(triggerBtn) {
   const totalFrames = 180;
 
   try {
-    if (typeof VideoEncoder !== "undefined") {
+    const encoderConfig = {
+      codec: "avc1.640028",
+      width,
+      height,
+      bitrate: 10_000_000,
+      framerate: fps
+    };
+    let canEncodeH264 = false;
+    if (typeof VideoEncoder !== "undefined" && typeof VideoEncoder.isConfigSupported === "function") {
+      try {
+        const support = await VideoEncoder.isConfigSupported(encoderConfig);
+        canEncodeH264 = Boolean(support?.supported);
+      } catch (error) {
+        console.warn("H.264 WebCodecs support check failed:", error);
+      }
+    }
+
+    if (canEncodeH264) {
       const muxer = new Muxer({
         target: new ArrayBufferTarget(),
         video: {
@@ -1631,13 +1665,7 @@ async function recordCardMp4(triggerBtn) {
         }
       });
 
-      await videoEncoder.configure({
-        codec: "avc1.640028",
-        width: width,
-        height: height,
-        bitrate: 10_000_000,
-        framerate: fps
-      });
+      videoEncoder.configure(encoderConfig);
 
       let lastUiYield = performance.now();
 
@@ -1670,7 +1698,7 @@ async function recordCardMp4(triggerBtn) {
 
       const buffer = muxer.target.buffer;
       const mp4Blob = new Blob([buffer], { type: "video/mp4" });
-      displayMp4Result(mp4Blob);
+      displayVideoResult(mp4Blob, "mp4");
     } else {
       // 兼容兜底模式：MediaRecorder
       await recordViaMediaRecorder(width, height, totalFrames, fps, triggerBtn);
@@ -1722,10 +1750,10 @@ async function recordViaMediaRecorder(width, height, totalFrames, fps, triggerBt
 
   recorder.stop();
   const videoBlob = await recordPromise;
-  displayMp4Result(videoBlob);
+  displayVideoResult(videoBlob, mimeType.startsWith("video/mp4") ? "mp4" : "webm");
 }
 
-function displayMp4Result(blob) {
+function displayVideoResult(blob, extension = "mp4") {
   const sizeMb = (blob.size / (1024 * 1024)).toFixed(1);
   const videoEl = $("mp4-preview-video");
   const sizeBadge = $("mp4-filesize-badge");
@@ -1738,21 +1766,21 @@ function displayMp4Result(blob) {
     videoEl.play().catch(() => {});
   }
   if (sizeBadge) {
-    sizeBadge.textContent = `约 ${sizeMb} MB · 1080P 60FPS`;
+    sizeBadge.textContent = `约 ${sizeMb} MB · 1080P 60FPS · ${extension.toUpperCase()}`;
   }
   if (downloadBtn) {
     downloadBtn.onclick = () => {
       const a = document.createElement("a");
       a.href = videoUrl;
       const cName = state.title || "card";
-      a.download = `holo-card-${cName}-1080p-60fps.mp4`;
+      a.download = `holo-card-${cName}-1080p-60fps.${extension}`;
       a.click();
-      showToast("1080P MP4 视频已开始下载！");
+      showToast(`1080P ${extension.toUpperCase()} 视频已开始下载！`);
     };
   }
 
   openMp4Modal();
-  showToast("🎬 1080P 60帧全息卡牌短视频已生成！");
+  showToast(`🎬 1080P 60帧 ${extension.toUpperCase()} 短视频已生成！`);
 }
 
 
@@ -3486,7 +3514,11 @@ function renderCustomFxPills() {
       pill.dataset.effect = effKey;
       pill.type = "button";
       pill.setAttribute("aria-pressed", String(isActive));
-      pill.innerHTML = `★ <span class="custom-name">${item.name}</span>`;
+      pill.append("★ ");
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "custom-name";
+      nameSpan.textContent = item.name || "自定义特效";
+      pill.appendChild(nameSpan);
 
       pill.addEventListener("click", () => {
         selectCustomFx(item.id);
@@ -3846,6 +3878,13 @@ async function renderDeckGrid() {
     item.dataset.id = card.id;
 
     const cardName = card.name || card.title || "未命名卡牌";
+    const safeCardName = escapeHtml(cardName);
+    const safeCardId = escapeHtml(card.id);
+    const safeSubtitle = escapeHtml(card.subtitle || "");
+    const safeCollection = escapeHtml(card.collection || "典藏");
+    const safeThumb = escapeHtml(safeDeckImageSource(card.thumbDataUrl));
+    const safeFinish = escapeHtml(finishMap[card.finish] || "珠光");
+    const safeEffect = escapeHtml(effectNames[card.cardEffect] || "特效");
     const dateStr = card.createdAt
       ? new Date(card.createdAt).toLocaleDateString("zh-CN", {
           month: "2-digit",
@@ -3857,44 +3896,44 @@ async function renderDeckGrid() {
 
     item.innerHTML = `
       <div class="deck-card-thumb-wrap">
-        <img src="${card.thumbDataUrl || './assets/subject.png'}" alt="${cardName}" class="deck-card-thumb" />
-        <span class="deck-card-finish-tag">${finishMap[card.finish] || "珠光"}</span>${card.cardEffect && card.cardEffect !== "none" ? `<span class="deck-card-finish-tag" style="top: auto; bottom: 6px; background: rgba(50, 80, 150, 0.85);">${effectNames[card.cardEffect] || "特效"}</span>` : ""}
+        <img src="${safeThumb}" alt="${safeCardName}" class="deck-card-thumb" />
+        <span class="deck-card-finish-tag">${safeFinish}</span>${card.cardEffect && card.cardEffect !== "none" ? `<span class="deck-card-finish-tag" style="top: auto; bottom: 6px; background: rgba(50, 80, 150, 0.85);">${safeEffect}</span>` : ""}
       </div>
       <div class="deck-card-info">
         <div class="deck-card-title-row">
-          <div class="deck-card-name" title="点击或按铅笔修改卡牌名称">${cardName}</div>
-          <button class="btn-deck-rename" data-id="${card.id}" type="button" title="修改卡牌名称">
+          <div class="deck-card-name" title="点击或按铅笔修改卡牌名称">${safeCardName}</div>
+          <button class="btn-deck-rename" data-id="${safeCardId}" type="button" title="修改卡牌名称">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 20h9"></path>
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
             </svg>
           </button>
         </div>
-        <div class="deck-card-sub" title="${card.subtitle}">${card.subtitle || ""}</div>
+        <div class="deck-card-sub" title="${safeSubtitle}">${safeSubtitle}</div>
         <div class="deck-card-meta">
-          <span class="deck-meta-tag">${card.collection || "典藏"}</span>
+          <span class="deck-meta-tag">${safeCollection}</span>
           <span class="deck-meta-date">${dateStr}</span>
         </div>
       </div>
       <div class="deck-card-actions">
-        <button class="btn-deck-use" data-id="${card.id}" type="button">
+        <button class="btn-deck-use" data-id="${safeCardId}" type="button">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
           <span>一键使用</span>
         </button>
-        <button class="btn-deck-clone" data-id="${card.id}" type="button" title="复制卡牌副本">
+        <button class="btn-deck-clone" data-id="${safeCardId}" type="button" title="复制卡牌副本">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
         </button>
-        <button class="btn-deck-export-one" data-id="${card.id}" type="button" title="导出此卡牌 (.json)">
+        <button class="btn-deck-export-one" data-id="${safeCardId}" type="button" title="导出此卡牌 (.json)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
         </button>
-        <button class="btn-deck-del" data-id="${card.id}" type="button" title="从牌库删除">
+        <button class="btn-deck-del" data-id="${safeCardId}" type="button" title="从牌库删除">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
       </div>
@@ -3909,7 +3948,7 @@ async function renderDeckGrid() {
       e.stopPropagation();
       const currentName = card.name || card.title || "";
       titleRow.innerHTML = `
-        <input type="text" class="deck-rename-input" value="${currentName.replace(/"/g, '&quot;')}" />
+        <input type="text" class="deck-rename-input" value="${escapeHtml(currentName)}" />
         <button class="btn-rename-ok" title="确认">✓</button>
         <button class="btn-rename-cancel" title="取消">✕</button>
       `;
@@ -4342,13 +4381,6 @@ async function handleSaveCurrentChanges() {
 
     // 1. 存入 localStorage 设为后续进站的默认配置
     localStorage.setItem("holo_card_custom_default_settings", JSON.stringify(currentSettings));
-
-    // 同步发送至服务端落盘，使打包出的整站 ZIP 默认配置实时对齐
-    fetch("/api/save-settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(currentSettings)
-    }).catch(() => {});
 
     // 2. 仅当当前正在编辑牌库中的某张指定卡牌时，更新该特定卡牌，坚决杜绝误伤或串改其他卡牌
     try {

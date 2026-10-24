@@ -10,6 +10,8 @@ coverage/
 *.zip
 renders/
 .netlify/
+dist/
+.wrangler/
 
 # Asset Backups
 assets/*.orig.png
@@ -17,8 +19,8 @@ assets/effects/*.orig.png
 
 # Environment & Local Overrides
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # System & Editor Files
 .DS_Store

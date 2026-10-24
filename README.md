@@ -50,20 +50,20 @@
 - 📱 **移动端与交互体验**：
   - **手机陀螺仪体感联动**：晃动手机即可自然触发全息流光与卡牌倾斜；
   - **自适应拖拽旋转**：实时捕获当前物理旋转角，正反面翻转自适应反转手势符号；
-  - **双向同步架构**：制作工坊 (Page A) 与 3D 展台 (Page B) 实时双向热同步。
+  - **共享状态视图**：制作工坊视图与 3D 展台视图使用同一份前端状态，切换视图时同步呈现。
 - 💾 **本地离线牌库系统**：
   - 基于浏览器原生 IndexedDB 保存；实际容量受浏览器、设备空间、隐私模式与站点存储策略限制；
   - 支持多套卡牌保存、一键载入、卡牌改名重命名、删除管理；
-  - 纯前端本地持久化，断网环境下依然可随时鉴赏。
+  - 牌库数据保存在当前浏览器中；已加载页面内的牌库操作不依赖服务器，但项目未提供 PWA 离线启动保证。
 - 📤 **卡牌数据导出与导入**：
-  - 支持一键导出单张卡牌为 `.json` 配置文件（内嵌原始无损高清大图与完整 3D 排版参数）；
+  - 支持导出单张卡牌为 `.json` 配置文件；素材以 Data URL 形式随卡牌数据保存，具体格式与尺寸取决于上传素材及浏览器处理流程；
   - 好友可在支持相关 Web API 的现代浏览器中导入卡牌数据；实际呈现效果受浏览器、设备性能和原始素材质量影响。
 - 🚀 **Netlify 自动化一键部署与纯享展台包**：
   - **独立纯享展台包**：一键导出专用于展示该张卡牌的独立纯净网站（移除所有工坊与侧边栏）；
   - **部署引导流程**：生成独立展台 ZIP 后，可前往 Netlify Drop 上传；登录并认领站点后可长期保留对应预览站。
 - 🎞️ **动态内容导出**：
   - 400 × 560、20 FPS、3 秒循环 GIF；
-  - 支持 WebCodecs 时导出 1080 × 1512、60 FPS、3 秒 H.264 MP4，并提供浏览器兼容性降级路径；
+  - 浏览器支持相应 H.264 WebCodecs 配置时导出 1080 × 1512、60 FPS、3 秒 MP4；否则使用 MediaRecorder，可能生成 MP4 或 WebM；
   - 实际可用性与导出速度取决于浏览器能力和设备性能。
 - 🧩 **多素材与双层背景**：
   - 主体、背景、卡面特效、卡背 4 类素材自由组合；
@@ -83,9 +83,6 @@ holo-card-studio/
 │   ├── lineart.png          # 全息烫金高亮线稿图层
 │   ├── text.png             # 卡面矢量装饰文字图层
 │   └── effects/             # 9 种卡面全息光效源图层
-├── netlify/
-│   └── functions/           # Netlify Serverless 云函数后端
-│       └── deploy-temp-site.mjs # 自动化创建独立预览站的云端代理
 ├── _headers                 # Netlify 全局安全跨域头与缓存控制
 ├── _redirects               # Netlify API 路由重写规则
 ├── netlify.toml             # Netlify 构建与部署配置
@@ -97,9 +94,13 @@ holo-card-studio/
 ├── app.js                   # Three.js 3D 全息渲染管线与着色器核心
 ├── site.js                  # 工坊制作、牌库持久化、打包导出与全局控制
 ├── server.mjs               # 本地开发服务器 (Node.js)
-├── bundle.sh                # 本地 ESBuild 构建脚本
+├── bundle.sh                # 兼容用本地 ESBuild 构建脚本
+├── scripts/build.mjs        # 生成 Bundle 并组装 dist 静态发布目录
 ├── card-config.json         # 默认卡牌基础元数据与 3D 初始参数
-└── package.json             # 项目元信息与编译依赖
+├── package.json             # 项目元信息与编译依赖
+├── NOTICE.md                # 上游来源与修改说明
+├── THIRD_PARTY_NOTICES.md   # 第三方软件许可清单
+└── ASSETS_LICENSES.md       # 素材授权状态与公开前阻断说明
 ```
 
 ---
@@ -125,11 +126,11 @@ npm run dev
 服务默认启动于 `http://localhost:4174`（或通过 `PORT` 环境变量自定义端口）。打开浏览器即可立即体验制作工坊与 3D 展台。
 
 ### 3. 代码打包构建
-项目使用 ESBuild 进行零配置极致压缩与模块打包：
+项目使用 ESBuild 打包并压缩 `app.js` 与 `site.js`：
 ```bash
 npm run build
 ```
-该命令将自动更新输出 `app.bundle.js` 与 `site.bundle.js`。
+该命令会更新 `app.bundle.js` 与 `site.bundle.js`，并将可公开部署的静态文件组装到 `dist/`；请勿直接编辑 Bundle 构建产物。
 
 ---
 
@@ -180,7 +181,7 @@ npm run build
 
 ### 方案 A：部署上线至 Cloudflare (推荐，全球 Anycast CDN 加速)
 
-Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Workers 和 Pages」** 入口，本项目已内置标准 `wrangler.jsonc` 配置与 `.assetsignore` 资产过滤规则，原生支持开箱即用。
+Cloudflare 控制台已将 Workers 与 Pages 整合为“Workers 和 Pages”入口。本项目通过 `npm run build` 生成独立的 `dist/`，`wrangler.jsonc` 仅发布该目录。
 
 #### 步骤 1：在 Cloudflare 控制台新建应用
 1. 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)；
@@ -192,18 +193,18 @@ Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Wo
 - **构建命令 (Build command)**：`npm run build`
 - **部署命令 (Deploy command)**：`npx wrangler deploy`
 - **高级设置 - 路径 (Root directory)**：`.`
+- **静态资源目录**：由 `wrangler.jsonc` 指向 `./dist`
 
 #### 步骤 3：点击「部署」完成上线
 点击“部署”后，Cloudflare 会执行构建并分配 HTTPS 访问地址；实际完成时间取决于依赖安装、网络和平台队列。
 
-> 💡 **避坑说明 (已内置防御)**：  
-> 本项目已在根目录包含 `.assetsignore` 规则，自动忽略 `node_modules` 庞大的开发依赖，避免触发 Cloudflare Workers 静态资源单个文件超过 25 MiB 的限制错误。
+> 发布前会先构建独立 `dist/` 目录，源码、开发服务器、依赖目录与本地文件不会作为静态资源上传。
 
 ---
 
 ### 方案 B：部署上线至 Netlify (传统标准流程)
 
-本项目已配置 Netlify 构建与 Functions 目录；站内独立展台发布采用“生成 ZIP → 前往 Netlify Drop 上传并认领”的引导流程：
+本项目已配置 Netlify 静态构建，发布目录限定为 `dist/`。站内独立展台发布采用“生成 ZIP → 前往 Netlify Drop 上传并认领”的引导流程，仓库不再暴露匿名部署代理。
 
 #### 步骤 1：在 Netlify 导入项目
 1. 访问 [Netlify 控制台](https://app.netlify.com/) 并登录；
@@ -211,8 +212,7 @@ Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Wo
 3. 选择 **GitHub** 并授权选择您的 `holo-card-studio` 仓库；
 4. Netlify 会自动检测并读取仓库根目录下的 `netlify.toml`：
    - **Build command**: `npm run build`
-   - **Publish directory**: `.`
-   - **Functions directory**: `netlify/functions`
+   - **Publish directory**: `dist`
 5. 点击 **"Deploy holo-card-studio"** 并等待平台完成构建与发布；实际时间取决于网络和平台队列。
 
 ---
@@ -225,17 +225,19 @@ Cloudflare 最新版控制台已将 Workers 与 Pages 整合为统一的 **「Wo
 ## 📤 卡牌分享与交流指南
 
 1. **导出完整卡牌文件**：
-   在 3D 展台侧边栏点击 **「📤 导出卡牌」**，浏览器会下载一个 `.json` 文件。该文件包含原始超清大图与全套工艺参数。
+   在 3D 展台侧边栏点击“导出卡牌”，浏览器会下载一个 `.json` 文件。该文件包含卡牌素材数据与工艺参数；最终呈现效果仍受原始素材、浏览器和设备影响。
 2. **好友一键导入**：
-   好友访问您的线上网站，打开顶栏的 **「牌库」**，点击 **「导入卡牌」** 选中该文件，即可瞬间将该卡牌收入其个人牌库，并在 3D 展台中以 100% 原始画质全屏欣赏。
+   好友访问线上网站后，可在牌库中导入该文件并在 3D 展台查看。请只导入来源可信的卡牌文件，并自行确认素材授权。
 
 ---
 
 ## 📜 开源协议与版权声明
 
-- **源码许可**：软件代码按 [MIT License](./LICENSE) 发布；
-- **素材许可**：默认示例角色与美术素材不因代码采用 MIT License 而自动获得相同授权；
-- **使用责任**：示例素材仅用于个人学习、技术研究和非商业展示。使用者应自行确认上传素材、生成素材及导出内容的版权和使用权限。
+- **源码许可**：软件代码按 [MIT License](./LICENSE) 发布；上游及修改说明见 [NOTICE](./NOTICE.md)；
+- **第三方软件**：依赖与许可证清单见 [THIRD_PARTY_NOTICES](./THIRD_PARTY_NOTICES.md)；
+- **素材许可**：MIT 不自动覆盖角色、美术素材、商标或用户内容。逐项状态见 [ASSETS_LICENSES](./ASSETS_LICENSES.md)；
+- **公开前状态**：当前默认演示美术尚无仓库内可核验的再分发授权记录。在替换为原创/CC0/明确授权素材，或补齐书面授权与来源记录前，不应将包含这些素材的仓库公开；
+- **使用责任**：使用者应自行确认上传素材、生成素材及导出内容的版权和使用权限。
 
 ---
 
