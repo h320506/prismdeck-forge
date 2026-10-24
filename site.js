@@ -10,17 +10,27 @@ function $(id) {
   return document.getElementById(id);
 }
 
-// A 界面 Saobby 网页计数器：请求独立计数器 ID；第三方失败或超时只隐藏统计。
+// Saobby 网页计数器配置：Fork 用户应替换 counterId，并将自己的正式域名加入白名单。
+const VISIT_COUNTER_CONFIG = {
+  counterId: "xosu9uca",
+  allowedHosts: new Set(["card.128813.xyz"])
+};
+
+// A 界面 Saobby 网页计数器：仅白名单域名启用；第三方失败或超时只隐藏统计。
 async function initVisitCounter() {
   const counter = $("site-visit-counter");
   const visitsNode = $("site-total-visits");
   const visitorsNode = $("site-total-visitors");
   if (!counter || !visitsNode || !visitorsNode) return;
+  if (!VISIT_COUNTER_CONFIG.counterId || !VISIT_COUNTER_CONFIG.allowedHosts.has(window.location.hostname)) {
+    counter.hidden = true;
+    return;
+  }
 
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 6500);
   try {
-    const response = await fetch("https://w.saobby.com/api/visit/xosu9uca", {
+    const response = await fetch(`https://w.saobby.com/api/visit/${encodeURIComponent(VISIT_COUNTER_CONFIG.counterId)}`, {
       method: "GET",
       mode: "cors",
       cache: "no-store",

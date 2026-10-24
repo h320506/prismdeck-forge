@@ -96,7 +96,7 @@ npm install
 npm run dev
 # 或 npm start
 ```
-服务默认启动于 `http://localhost:4173`（或自定义端口）。打开浏览器即可立即体验制作工坊与 3D 展台。
+服务默认启动于 `http://localhost:4174`（或通过 `PORT` 环境变量自定义端口）。打开浏览器即可立即体验制作工坊与 3D 展台。
 
 ### 3. 代码打包构建
 项目使用 ESBuild 进行零配置极致压缩与模块打包：
@@ -104,6 +104,45 @@ npm run dev
 npm run build
 ```
 该命令将自动更新输出 `app.bundle.js` 与 `site.bundle.js`。
+
+---
+
+## 📊 配置自己的访问计数器
+
+A 界面底部的“总访问数 / 总访客数”使用 [Saobby 网页计数器](https://www.saobby.com/webcounter/) 提供统计。为避免 Fork 后的站点误用并污染原站数据，项目默认只允许正式域名 `card.128813.xyz` 启用内置计数器；您部署到其他域名时，统计区域会自动隐藏。
+
+### 1. 创建自己的计数器
+
+1. 打开 [Saobby 网页计数器](https://www.saobby.com/webcounter/)；
+2. 按页面提示创建一个新计数器并保存；
+3. 进入生成的控制面板，在嵌入地址或计数器图片地址中找到计数器 ID。例如地址为 `https://w.saobby.com/w/abcd1234` 时，计数器 ID 就是 `abcd1234`；
+4. 控制面板访问密钥只用于管理设置，请勿填写到前端源码或提交到公开仓库。
+
+### 2. 修改项目配置
+
+打开 `site.js`，找到文件顶部的 `VISIT_COUNTER_CONFIG`：
+
+```js
+const VISIT_COUNTER_CONFIG = {
+  counterId: "替换为你的计数器ID",
+  allowedHosts: new Set(["你的正式域名.com", "www.你的正式域名.com"])
+};
+```
+
+配置说明：
+
+- `counterId`：填写 Saobby 生成的公开计数器 ID，不要填写控制面板访问密钥；
+- `allowedHosts`：填写允许启用统计的正式域名，只写主机名，不要带 `https://`、路径或结尾斜杠；
+- 有多个正式域名时可以继续添加，例如 `new Set(["example.com", "www.example.com"])`；
+- `localhost` 和 `127.0.0.1` 默认不统计，避免本地开发污染线上数据。如确需本地调试，可临时加入白名单，测试完成后请移除。
+
+修改完成后重新构建：
+
+```bash
+npm run build
+```
+
+若 Saobby 接口故障、请求超时或返回异常，页面会自动隐藏统计区域，不会影响素材上传、卡牌编辑、3D 渲染、牌库及导出功能。
 
 ---
 
